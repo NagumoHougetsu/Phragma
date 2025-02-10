@@ -1,77 +1,69 @@
 using UnityEngine;
-using UnityEngine.InputSystem;  // InputSystemを使うために追加
+using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour {
     public float moveSpeed = 5f;
     public float lookSensitivity = 2f;
-    public Vector3 initialCharacterPosition;  // 初期位置用
+    public Vector3 initialCharacterPosition;
 
-    private CameraController cameraController;  // CameraControllerへの参照
+    private CameraController cameraController;
     private CharacterController characterController;
-    private float rotationSpeed = 100f;  // 回転速度
-    private float rotation = 0f;
+    private Animator animator; // Animatorを追加
+    private float rotationSpeed = 100f;
+    private bool wasRunning = false;
 
     void Start() {
-        // 初期位置設定（シーン開始時にキャラの位置を初期化）
         transform.position = initialCharacterPosition;
 
-        // 同じオブジェクト内の CameraController を取得
-        cameraController = GetComponentInChildren<CameraController>();  // 子オブジェクトからCameraControllerを取得
-
-        // SceneManager から characterPrefab を参照して CharacterController を取得
+        cameraController = GetComponentInChildren<CameraController>();
         SceneManager sceneManager = GetComponent<SceneManager>();
         if (sceneManager != null && sceneManager.characterPrefab != null) {
             characterController = sceneManager.characterPrefab.GetComponent<CharacterController>();
+            animator = sceneManager.characterPrefab.GetComponent<Animator>(); // Animator取得
         }
 
-        // カーソルロック
         Cursor.lockState = CursorLockMode.Locked;
 
-        // エラー処理
         if (cameraController == null) {
             Debug.LogWarning("CameraController が見つかりませんでした！");
         }
-
         if (characterController == null) {
             Debug.LogWarning("CharacterController が見つかりませんでした！");
+        }
+        if (animator == null) {
+            Debug.LogWarning("Animator が見つかりませんでした！");
         }
     }
 
     void Update() {
-        // 移動入力の確認
+        if (characterController == null) return;
+
         float moveX = 0;
         float moveZ = 0;
         float rot = 0;
 
-        // Keyboard inputを取得
         if (Keyboard.current != null) {
             moveX = Keyboard.current.aKey.isPressed ? -1 : (Keyboard.current.dKey.isPressed ? 1 : 0);
             moveZ = Keyboard.current.wKey.isPressed ? 1 : (Keyboard.current.sKey.isPressed ? -1 : 0);
-            rot = Keyboard.current.eKey.isPressed ? -1 : (Keyboard.current.qKey.isPressed ? 1 : 0);
+            rot = Keyboard.current.eKey.isPressed ? 1 : (Keyboard.current.qKey.isPressed ? -1 : 0);
         }
 
-        Debug.Log($"MoveX: {moveX}, MoveZ: {moveZ}, Rotate: {rot}");  // 入力を確認
-
-        // ここから移動処理
-        if (characterController == null) return;
-
-        Vector3 move = transform.right * moveX + transform.forward * moveZ;
+        // キャラクターの前方と右方向を基準に移動
+        Vector3 move = characterController.transform.forward * moveZ + characterController.transform.right * moveX;
         characterController.Move(move * moveSpeed * Time.deltaTime);
 
-        // 回転入力処理
-        characterController.transform.Rotate(0, rot * rotationSpeed * Time.deltaTime, 0);  
-        
-        
-    }
+        // 回転処理
+        characterController.transform.Rotate(0, rot * rotationSpeed * Time.deltaTime, 0);
 
-    void LateUpdate() {
-        // カメラがキャラクターの位置に追従する
-        if (cameraController != null) {
-            // キャラクターの位置にカメラを追従させる
-            cameraController.transform.position = transform.position;
+        bool isMoving = move.magnitude > 0.3f;  // 現在の移動状態
 
-            // カメラの回転を調整する
-            cameraController.transform.rotation = transform.rotation;  // キャラクターの回転に合わせる
+        // 前フレームと現在の状態を比較
+        if (isMoving != wasRunning) {
+            // 状態が変わった時にのみ遷移を行う
+            if (animator != null) {
+                animator.SetBool("IsRunning", isMoving);  // 移動しているかどうかで遷移
+            }
+            wasRunning = isMoving;  // 現在の状態を保存
         }
     }
 }
