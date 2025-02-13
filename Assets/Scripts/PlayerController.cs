@@ -6,6 +6,9 @@ public class PlayerController : MonoBehaviour {
     public float lookSensitivity = 2f;
     public Vector3 initialCharacterPosition;
 
+    // 直接キャラクターのPrefabをインスペクターで指定
+    public GameObject characterPrefab; // 追加
+
     private CameraController cameraController;
     private CharacterController characterController;
     private Animator animator; // Animatorを追加
@@ -16,10 +19,11 @@ public class PlayerController : MonoBehaviour {
         transform.position = initialCharacterPosition;
 
         cameraController = GetComponentInChildren<CameraController>();
-        SceneManager sceneManager = GetComponent<SceneManager>();
-        if (sceneManager != null && sceneManager.characterPrefab != null) {
-            characterController = sceneManager.characterPrefab.GetComponent<CharacterController>();
-            animator = sceneManager.characterPrefab.GetComponent<Animator>(); // Animator取得
+        
+        // characterPrefabが設定されていれば、その中からCharacterControllerとAnimatorを取得
+        if (characterPrefab != null) {
+            characterController = characterPrefab.GetComponent<CharacterController>();
+            animator = characterPrefab.GetComponent<Animator>(); // Animator取得
         }
 
         Cursor.lockState = CursorLockMode.Locked;
