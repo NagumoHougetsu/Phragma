@@ -16,7 +16,7 @@ public class CameraController : MonoBehaviour {
     private float fpsDistance = 0.5f;  // FPSカメラのキャラからの距離
     private float fpsHeight = 1.6f;    // FPSカメラの高さ
 
-    private SceneManager sceneManager;  // SceneManagerクラスへの参照
+    private PlayerController playerController;  // SceneManagerクラスへの参照
 
     void Awake(){
         // 初期のTPSカメラオフセット設定
@@ -28,11 +28,11 @@ public class CameraController : MonoBehaviour {
 
     void Start() {
         // SceneManagerを取得（親オブジェクト内で同じオブジェクトにアタッチされていると仮定）
-        sceneManager = GetComponentInParent<SceneManager>();
+        playerController = GetComponentInParent<PlayerController>();
 
-        if (sceneManager != null && sceneManager.characterPrefab != null) {
+        if (playerController != null && playerController.characterPrefab != null) {
             // SceneManagerからキャラクターのTransformを取得
-            playerTransform = sceneManager.characterPrefab.transform;
+            playerTransform = playerController.characterPrefab.transform;
         } else {
             Debug.LogError("SceneManagerまたはcharacterPrefabが設定されていません！");
         }
