@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Profiling;
+using Unity.Profiling;
 
 #if UNITY_EDITOR
 using UnityEditor; // UnityStatsのために必要 
@@ -24,6 +25,8 @@ public class PerformanceMonitor : MonoBehaviour
     private string currentTab = "Windows";  // 現在のタブ情報（デフォルトはWindows）
 
     private FlopsManager flopsManager;
+    private ProfilerRecorder cpuRecorder;
+    private ProfilerRecorder gpuRecorder;
 
     public float fps { get; private set; }
     public long memory { get; private set; }
@@ -35,6 +38,8 @@ public class PerformanceMonitor : MonoBehaviour
     public int materialCount { get; private set; }
     public int textureCount { get; private set; }
     public int objectCount { get; private set; }
+    public float cpuUsage { get; private set; }
+    public float gpuUsage { get; private set; }
 
     void Start()
     {
@@ -52,15 +57,25 @@ public class PerformanceMonitor : MonoBehaviour
         SetActivePanel(windowsPanel); // 初期状態でWindowsのパネルを表示
     }
 
-    void Update()
-    {
+    void OnEnable(){
+        // CPU Usage の ProfilerRecorder を開始
+        cpuRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Time");
+        // GPU Usage の ProfilerRecorder を開始
+        gpuRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "GPU Total Time");
+    }
+    void OnDisable(){
+        cpuRecorder.Dispose();
+        gpuRecorder.Dispose();
+    }
+
+    void Update(){
+        
         if (performanceText == null) return;
 
         timer += Time.deltaTime;
         frameCount++;
 
-        if (timer >= 0.5f)
-        {
+        if (timer >= 0.5f){
             fps = frameCount / timer;
             timer = 0;
             frameCount = 0;
@@ -79,16 +94,22 @@ public class PerformanceMonitor : MonoBehaviour
         triangles = UnityEditor.UnityStats.triangles;
         vertices = UnityEditor.UnityStats.vertices;
 #endif
-
         materialCount = Resources.FindObjectsOfTypeAll<Material>().Length;
         textureCount = Resources.FindObjectsOfTypeAll<Texture>().Length;
         objectCount = Resources.FindObjectsOfTypeAll<GameObject>().Length;
 
+        // CPU Usage / GPU Usage の取得（数値はミリ秒単位なので Time.deltaTime で割合に換算）
+        if (!cpuRecorder.Valid || !gpuRecorder.Valid){
+            Debug.Log("ProfilerRecorder is NOT valid! Development Build を確認して");
+        }
+
+        cpuUsage = cpuRecorder.LastValue / 1_000_000f;  // ミリ秒単位
+        gpuUsage = gpuRecorder.LastValue / 1_000_000f;
+
         performanceText.supportRichText = true;  // 念のため
 
         // 現在選ばれているタブに応じて情報を表示
-        if (currentTab == "Windows")
-        {
+        if (currentTab == "Windows"){
             performanceText.text = GetWindowsPerformanceText(fps, memory, drawCalls, setPassCalls, batches, triangles, vertices, materialCount, textureCount, objectCount);
         }
 
@@ -149,7 +170,9 @@ public class PerformanceMonitor : MonoBehaviour
 
     string GetWindowsPerformanceText(float fps, long memory, int drawCalls, int setPassCalls, int batches, int triangles, int vertices, int materialCount, int textureCount, int objectCount)
     {
-        string text = $"FPS: {fps,23:F1} fps\n" +
+        string text = $"FPS: {fps,21:F1} fps\n" +
+                      $"CPU処理時間: {cpuUsage,14:F1} ミリ秒/秒 \n" +
+                      $"CPU処理時間: {gpuUsage,14:F1} ミリ秒/秒 \n" +
                       $"メモリ消費: {memory,15:N0} MB\n" +
                       $"DrawCalls数: {drawCalls,13:N0} 回\n" +
                       $"SetPass数: {setPassCalls,15:N0} 回\n" +
