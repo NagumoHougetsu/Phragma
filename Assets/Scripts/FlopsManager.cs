@@ -325,7 +325,6 @@ public class FlopsManager : MonoBehaviour
         float pcTotalFLOPS = (cpuClockFrequency * cpuWidth * cpuCores) + (gpuClockFrequency * gpuWidth * gpuShaderProcessors);
         // FPSの換算を計算
         float equivalentFPS = fps * (snapdragonTotalFLOPS / pcTotalFLOPS) * 2500;
-        Debug.Log(equivalentFPS);
         return equivalentFPS;
     }
 

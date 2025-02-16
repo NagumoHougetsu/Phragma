@@ -1,24 +1,37 @@
 using UnityEngine;
+using UnityEngine.UI; // UIを扱うために必要
 
-[ExecuteAlways] // 再生中・エディターのどちらでも動作
+[ExecuteAlways]
 public class FrustumCullingGizmos : MonoBehaviour
 {
-    private Camera activeCamera;  // 現在アクティブなカメラ
-    private Renderer[] allRenderers; // シーン内の全オブジェクトのレンダラー
+    private Camera activeCamera;
+    private Renderer[] allRenderers;
+    public Button toggleButton; // カリングON/OFFの切り替えボタン
+    private bool isFrustumCullingEnabled = true; // カリングの有効状態
+    private Image buttonImage; // ボタンのImageコンポーネント
 
     void Start()
     {
-        if (!Application.isPlaying) return; // 再生中のみ実行
+        if (!Application.isPlaying) return;
+
         FindAllRenderers();
         DetectActiveCamera();
+
+        if (toggleButton != null)
+        {
+            toggleButton.onClick.AddListener(ToggleFrustumCulling);
+            buttonImage = toggleButton.GetComponent<Image>(); // ボタンのImageを取得
+            UpdateButtonColor(); // 初期状態を反映
+        }
     }
 
     void Update()
     {
-        if (!Application.isPlaying) return; // 再生中のみ実行
+        if (!Application.isPlaying) return;
 
         DetectActiveCamera();
-        if (activeCamera == null) return;
+        if (activeCamera == null || !isFrustumCullingEnabled) return;
+
         ApplyFrustumCulling();
     }
 
@@ -29,11 +42,10 @@ public class FrustumCullingGizmos : MonoBehaviour
 
     void DetectActiveCamera()
     {
-        // 現在アクティブなカメラを検索
         Camera[] cameras = FindObjectsOfType<Camera>();
         foreach (Camera cam in cameras)
         {
-            if (cam.isActiveAndEnabled)  // アクティブかつ有効なカメラを選択
+            if (cam.isActiveAndEnabled)
             {
                 activeCamera = cam;
                 break;
@@ -53,7 +65,32 @@ public class FrustumCullingGizmos : MonoBehaviour
             if (rend == null) continue;
 
             bool isVisible = GeometryUtility.TestPlanesAABB(frustumPlanes, rend.bounds);
-            rend.enabled = isVisible; // 視界外なら非表示
+            rend.enabled = isVisible;
+        }
+    }
+
+    public void ToggleFrustumCulling()
+    {
+        isFrustumCullingEnabled = !isFrustumCullingEnabled;
+        Debug.Log($"フラスタムカリング: {(isFrustumCullingEnabled ? "ON" : "OFF")}");
+
+        // カリングOFF時は全オブジェクトを表示する
+        if (!isFrustumCullingEnabled && allRenderers != null)
+        {
+            foreach (Renderer rend in allRenderers)
+            {
+                if (rend != null) rend.enabled = true;
+            }
+        }
+
+        UpdateButtonColor();
+    }
+
+    void UpdateButtonColor()
+    {
+        if (buttonImage != null)
+        {
+            buttonImage.color = isFrustumCullingEnabled ? Color.white : new Color(0.5f, 0.5f, 0.5f, 1f); // OFFならグレー
         }
     }
 }
