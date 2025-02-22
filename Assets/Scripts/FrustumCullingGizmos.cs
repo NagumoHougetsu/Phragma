@@ -1,34 +1,34 @@
 using UnityEngine;
-using UnityEngine.UI; // UIを扱うために必要
+using UnityEngine.UI;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [ExecuteAlways]
 public class FrustumCullingGizmos : MonoBehaviour
 {
     private Camera activeCamera;
     private Renderer[] allRenderers;
-    public Button toggleButton; // カリングON/OFFの切り替えボタン
-    private bool isFrustumCullingEnabled = true; // カリングの有効状態
-    private Image buttonImage; // ボタンのImageコンポーネント
+    public Button toggleButton;
+    private bool isFrustumCullingEnabled = true;
+    private Image buttonImage;
 
     void Start()
     {
-        if (!Application.isPlaying) return;
-
         FindAllRenderers();
         DetectActiveCamera();
 
         if (toggleButton != null)
         {
             toggleButton.onClick.AddListener(ToggleFrustumCulling);
-            buttonImage = toggleButton.GetComponent<Image>(); // ボタンのImageを取得
-            UpdateButtonColor(); // 初期状態を反映
+            buttonImage = toggleButton.GetComponent<Image>();
+            UpdateButtonColor();
         }
     }
 
     void Update()
     {
-        if (!Application.isPlaying) return;
-
         DetectActiveCamera();
         if (activeCamera == null || !isFrustumCullingEnabled) return;
 
@@ -55,7 +55,10 @@ public class FrustumCullingGizmos : MonoBehaviour
 
     void ApplyFrustumCulling()
     {
-        if (allRenderers == null) FindAllRenderers();
+        if (allRenderers == null || Time.frameCount % 30 == 0) // 定期的に再取得
+        {
+            FindAllRenderers();
+        }
         if (activeCamera == null) return;
 
         Plane[] frustumPlanes = GeometryUtility.CalculateFrustumPlanes(activeCamera);
@@ -66,6 +69,10 @@ public class FrustumCullingGizmos : MonoBehaviour
 
             bool isVisible = GeometryUtility.TestPlanesAABB(frustumPlanes, rend.bounds);
             rend.enabled = isVisible;
+
+            #if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(rend);
+            #endif
         }
     }
 
@@ -74,7 +81,6 @@ public class FrustumCullingGizmos : MonoBehaviour
         isFrustumCullingEnabled = !isFrustumCullingEnabled;
         Debug.Log($"フラスタムカリング: {(isFrustumCullingEnabled ? "ON" : "OFF")}");
 
-        // カリングOFF時は全オブジェクトを表示する
         if (!isFrustumCullingEnabled && allRenderers != null)
         {
             foreach (Renderer rend in allRenderers)
@@ -90,7 +96,23 @@ public class FrustumCullingGizmos : MonoBehaviour
     {
         if (buttonImage != null)
         {
-            buttonImage.color = isFrustumCullingEnabled ? Color.white : new Color(0.5f, 0.5f, 0.5f, 1f); // OFFならグレー
+            buttonImage.color = isFrustumCullingEnabled ? Color.white : new Color(0.5f, 0.5f, 0.5f, 1f);
         }
     }
+
+    #if UNITY_EDITOR
+    void OnDrawGizmos()
+    {
+        if (allRenderers == null) return;
+
+        foreach (Renderer rend in allRenderers)
+        {
+            if (rend == null) continue;
+
+            bool isVisible = rend.enabled;
+            Gizmos.color = isVisible ? Color.green : Color.red;
+            Gizmos.DrawWireCube(rend.bounds.center, rend.bounds.size);
+        }
+    }
+    #endif
 }
