@@ -43,8 +43,8 @@ public class PerformanceMonitor : MonoBehaviour{
 
     //RenderingPlofiler
     //全体的指標
-    ProfilerRecorder setPassCallsRecorder;
     ProfilerRecorder drawCallsRecorder;
+    ProfilerRecorder setPassCallsRecorder;
     ProfilerRecorder totalBatchCountRecorder;
     ProfilerRecorder trianglesRecorder;
     //static関連指標
@@ -63,9 +63,8 @@ public class PerformanceMonitor : MonoBehaviour{
     ProfilerRecorder mainThreadTimeRecorder;
     ProfilerRecorder renderThreadTimeRecorder;
 
-    
-
-    ProfilerRecorder verticesCountRecorder;
+    private float updateInterval = 0.5f; // 更新間隔（秒）
+    private float lastUpdateTime = 0f;
 
     void Start(){
         // FlopsManagerを取得
@@ -78,6 +77,10 @@ public class PerformanceMonitor : MonoBehaviour{
         currentButton = windowsTabButton;
         SetButtonColors();
         SetActivePanel(windowsPanel); // 初期状態でWindowsのパネルを表示
+        // 現在選ばれているタブに応じて情報を表示
+        if (currentTab == "Windows"){
+            InvokeRepeating(nameof(UpdatePerformanceText), 0f, updateInterval);
+        }
     }
 
     void OnEnable(){
@@ -85,7 +88,7 @@ public class PerformanceMonitor : MonoBehaviour{
         //全体的指標
         setPassCallsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count");
         drawCallsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count");
-        totalBatchCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Total Batches Count");
+        totalBatchCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Batches Count");
         trianglesRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count");
         //static関連指標
         staticBatchDrawCallRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Static Batched Draw Calls Count");
@@ -97,15 +100,11 @@ public class PerformanceMonitor : MonoBehaviour{
         instanceBatchTrianglesRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Instanced Batched Triangles Count");
         //アセット関連指標
         textureCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Count");
-        textureMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Memory");
+        textureMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Bytes");
         //CPU処理時間
         mainThreadTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Main Thread", 15);
         renderThreadTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "Render Thread", 15); 
 
-        // CPU Usage の ProfilerRecorder を開始
-        cpuRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Scripts, "Timeline");
-        // GPU Usage の ProfilerRecorder を開始
-        gpuRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Total");
     }
 
     void OnDisable(){
@@ -130,8 +129,6 @@ public class PerformanceMonitor : MonoBehaviour{
         mainThreadTimeRecorder.Dispose();
         renderThreadTimeRecorder.Dispose();
 
-        cpuRecorder.Dispose();
-        gpuRecorder.Dispose();
     }
 
     void Update(){
@@ -143,35 +140,11 @@ public class PerformanceMonitor : MonoBehaviour{
             timer = 0;
             frameCount = 0;
         }
-        memory = Profiler.GetTotalAllocatedMemoryLong() / (1024 * 1024); // MB単位
-        // デフォルト値（ビルド環境用）
-        int drawCalls = 0, setPassCalls = 0, batches = 0, triangles = 0, vertices = 0;
-#if UNITY_EDITOR
-        // Unityエディター専用情報
-        drawCalls = UnityEditor.UnityStats.drawCalls;
-        setPassCalls = UnityEditor.UnityStats.setPassCalls;
-        batches = UnityEditor.UnityStats.batches;
-        triangles = UnityEditor.UnityStats.triangles;
-        vertices = UnityEditor.UnityStats.vertices;
-#endif
-        materialCount = Resources.FindObjectsOfTypeAll<Material>().Length;
-        textureCount = Resources.FindObjectsOfTypeAll<Texture>().Length;
-        objectCount = Resources.FindObjectsOfTypeAll<GameObject>().Length;
-        // CPU Usage / GPU Usage の取得（数値はミリ秒単位なので Time.deltaTime で割合に換算）
-        /*
-        if (!cpuRecorder.Valid || !gpuRecorder.Valid){
-            Debug.Log("ProfilerRecorder is NOT valid! Development Build を確認して");
-        }
-        */
-        cpuUsage = cpuRecorder.LastValue / 1_000_000f;  // ミリ秒単位
-        gpuUsage = gpuRecorder.LastValue / 1_000_000f;
-
         performanceText.supportRichText = true;  // 念のため
-        // 現在選ばれているタブに応じて情報を表示
-        if (currentTab == "Windows"){
-            performanceText.text = GetWindowsPerformanceText(fps, memory, drawCalls, setPassCalls, batches, triangles, vertices, materialCount, textureCount, objectCount);
+        if (Time.time - lastUpdateTime >= updateInterval){
+            UpdatePerformanceText();
+            lastUpdateTime = Time.time;
         }
-
     }
 
     private void SwitchTab(string tabName, Button clickedButton, GameObject panel){
@@ -219,22 +192,41 @@ public class PerformanceMonitor : MonoBehaviour{
         // 選ばれたパネルだけを表示する
         activePanel.SetActive(true);
     }
+    
+    void UpdatePerformanceText(){
+        // ここで最新の値を取得して表示
+        // 変化が5%以上あったら更新
+        performanceText.text = GetWindowsPerformanceText(
+            fps,
+            drawCallsRecorder.LastValue, setPassCallsRecorder.LastValue, totalBatchCountRecorder.LastValue, trianglesRecorder.LastValue,
+            staticBatchDrawCallRecorder.LastValue, staticBatchCountRecorder.LastValue, staticBatchTrianglesRecorder.LastValue, 
+            instanceBatchDrawCallRecorder.LastValue, instanceBatchCountRecorder.LastValue, instanceBatchTrianglesRecorder.LastValue,
+            textureCountRecorder.LastValue, textureMemoryRecorder.LastValue,                 
+            mainThreadTimeRecorder.LastValue, renderThreadTimeRecorder.LastValue                
+        );
+    }
 
-    string GetWindowsPerformanceText(float fps, long memory, int drawCalls, int setPassCalls, 
-                                    int batches, int triangles, int vertices, int materialCount, int textureCount, int objectCount){
-        string text = $"FPS: {fps,21:F1} fps\n" +
-                      $"DrawCalls数: {drawCallsRecorder.LastValue,13:N0} 回\n" +
-                      $"SetPass数: {setPassCallsRecorder.LastValue,15:N0} 回\n" +
-                      $"バッチ数: {totalBatchCountRecorder.LastValue,15:N0} 回\n" +
-                      $"ポリゴン数: {trianglesRecorder.LastValue,15:N0} tris\n" +
-                      $"StaticバッチDrawcall: {staticBatchDrawCallRecorder.LastValue,15:N0} 回\n" +
-                      $"Staticバッチ数: {staticBatchCountRecorder.LastValue,15:N0} 回\n" +
-                      $"Staticバッチポリゴン数: {staticBatchTrianglesRecorder.LastValue,15:N0} 回\n" +
-                      $"InstanceバッチDrawcall: {instanceBatchDrawCallRecorder.LastValue,15:N0} 回\n" +
-                      $"Instanceバッチ数: {instanceBatchCountRecorder.LastValue,15:N0} 回\n" +
-                      $"Instanceバッチポリゴン数: {instanceBatchTrianglesRecorder.LastValue,15:N0} 回\n" +
-                      $"テクスチャ数: {textureCountRecorder.LastValue,14:F1} 枚 \n" +
-                      $"テクスチャ消費メモリ: {textureMemoryRecorder.LastValue,14:F1} MB";
+    string GetWindowsPerformanceText(float fps, 
+                                    long drawcalls, long setpasscalls, long batches, long triangles, 
+                                    long staticDrawcalls , long staticBatches, long staticTriangles,
+                                    long instanceDrawcalls, long instanceBatches, long instanceTriangles,
+                                    long textureCount, long textureMemory, 
+                                    long mainThreadTime, long renderThreadTime){
+        string text = $"{((int)fps).ToString("N0").PadLeft(3)} fps\n" +
+                      $"{((int)drawcalls).ToString("N0").PadLeft(3)} Drawcalls\n" +
+                      $"{((int)setpasscalls).ToString("N0").PadLeft(3)} Setpasscalls\n" +
+                      $"{((int)batches).ToString("N0").PadLeft(3)} Batches\n" +
+                      $"{((int)triangles/1000).ToString("N0").PadLeft(3)} K Triangles\n" +
+                      $"{((int)staticDrawcalls).ToString("N0").PadLeft(3)} Drawcalls(Statie)\n" +
+                      $"{((int)staticBatches).ToString("N0").PadLeft(3)} Batches(Static)\n" +
+                      $"{((int)staticTriangles/1000).ToString("N0").PadLeft(3)} K Triangles(Static)\n" +
+                      $"{((int)instanceDrawcalls).ToString("N0").PadLeft(3)} Drawcalls(GPU)\n" +
+                      $"{((int)instanceBatches).ToString("N0").PadLeft(3)} Batches(GPU)\n" +
+                      $"{((int)instanceTriangles/1000).ToString("N0").PadLeft(3)} K Triangles(GPU)\n" +
+                      $"{((int)textureCount).ToString("N0").PadLeft(3)} 枚 \n" +  
+                      $"{textureMemory,2:0.000} GB(Textureメモリ) \n" +
+                      $"{mainThreadTime/ 1_000_000f,5:000.00} ミリ秒(CPU Mainスレッド) \n" +
+                      $"{renderThreadTime/ 1_000_000f,5:000.00} ミリ秒(CPU Renderスレッド)";
         return text;
     }
 

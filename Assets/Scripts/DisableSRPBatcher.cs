@@ -10,13 +10,10 @@ public class DisableSRPBatcher : MonoBehaviour
         {
             MaterialPropertyBlock mpb = new MaterialPropertyBlock();
             renderer.GetPropertyBlock(mpb);
-
-            // SRPバッチャーを無効化（異なるMaterialインスタンスを作成）
-            Material newMat = new Material(renderer.sharedMaterial);
-            newMat.enableInstancing = true; // GPUインスタンシングを有効化
-
-            renderer.material = newMat;
+            
+            // プロパティブロックを設定して、マテリアルを上書きせずにインスタンシング
             renderer.SetPropertyBlock(mpb);
         }
     }
 }
+

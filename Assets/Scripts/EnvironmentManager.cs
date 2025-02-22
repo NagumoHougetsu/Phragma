@@ -33,7 +33,6 @@ public class EnvironmentManager : MonoBehaviour{
     }
 
     void DisplayPrefab(int index){
-        Debug.Log($"DisplayPrefab() called with index: {index}"); // デバッグ用
         if (currentActivePrefab != null){
             currentActivePrefab.SetActive(false);
         }
@@ -47,8 +46,6 @@ public class EnvironmentManager : MonoBehaviour{
 
         int previousIndex = currentIndex;
         currentIndex = (currentIndex - 1 + environmentPrefabs.Length) % environmentPrefabs.Length;
-        Debug.Log($"ToggleUp() called: {previousIndex} -> {currentIndex}"); // デバッグ用
-
         Invoke(nameof(ApplyPrefabChange), 0.05f); // 0.05秒後に適用
     }
 
@@ -58,8 +55,6 @@ public class EnvironmentManager : MonoBehaviour{
 
         int previousIndex = currentIndex;
         currentIndex = (currentIndex + 1) % environmentPrefabs.Length;
-        Debug.Log($"ToggleDown() called: {previousIndex} -> {currentIndex}"); // デバッグ用
-
         Invoke(nameof(ApplyPrefabChange), 0.05f); // 0.05秒後に適用
     }
 
