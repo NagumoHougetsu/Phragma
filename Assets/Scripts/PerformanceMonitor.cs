@@ -43,34 +43,30 @@ public class PerformanceMonitor : MonoBehaviour{
 
     //RenderingPlofiler
     //全体的指標
-    ProfilerRecorder drawCallsRecorder;
-    ProfilerRecorder setPassCallsRecorder;
-    ProfilerRecorder totalBatchCountRecorder;
-    ProfilerRecorder trianglesRecorder;
-    //static関連指標
-    ProfilerRecorder staticBatchDrawCallRecorder;
-    ProfilerRecorder staticBatchCountRecorder;
-    ProfilerRecorder staticBatchTrianglesRecorder;
+    ProfilerRecorder drawCallsRecorder;//Drawcalls数
+    ProfilerRecorder setPassCallsRecorder;//Setpasscalls数
+    ProfilerRecorder totalBatchCountRecorder;//バッチ数
+    ProfilerRecorder trianglesRecorder;//polygon数
     //Instance関連指標
-    ProfilerRecorder instanceBatchDrawCallRecorder;
-    ProfilerRecorder instanceBatchCountRecorder;
-    ProfilerRecorder instanceBatchTrianglesRecorder;
+    ProfilerRecorder instanceBatchDrawCallRecorder;//GPUインスタンスされたDrawcall数
+    ProfilerRecorder instanceBatchCountRecorder;//GPUインスタンスされたBatch数
+    ProfilerRecorder instanceBatchTrianglesRecorder;//GPUインスタンスされたpolygon数
     //アセット関連指標
-    ProfilerRecorder textureCountRecorder;
-    ProfilerRecorder textureMemoryRecorder;
-    //CPU Usage Proflier
+    ProfilerRecorder usedTextureCountRecorder;//描画に使用されたTexture枚数
+    ProfilerRecorder usedTextureMemoryRecorder;//描画に使用されたTextureメモリ
     //CPU処理時間
-    ProfilerRecorder totalTimeRecorder;
-    ProfilerRecorder mainThreadTimeRecorder;
-    ProfilerRecorder renderThreadTimeRecorder;
-    ProfilerRecorder gpuTimeRecorder;
+    ProfilerRecorder cpuTotalTimeRecorder;//総CPU処理時間
+    ProfilerRecorder cpuMainThreadTimeRecorder;//CPUメインスレッド処理時間
+    ProfilerRecorder cpuRenderThreadTimeRecorder;//CPUレンダースレッド処理時間
+    ProfilerRecorder gpuTimeRecorder;//GPU描画にかかった時間/frame
     //Memory関連
-    ProfilerRecorder totalMemoryRecorder;
-    ProfilerRecorder textureCountRecorder2;
-    ProfilerRecorder meshCountRecorder;
-    ProfilerRecorder meshMemoryRecorder;
-    ProfilerRecorder materialCountRecorder;
-    ProfilerRecorder materialMemoryRecorder;
+    ProfilerRecorder totalMemoryRecorder;//総メモリ消費
+    ProfilerRecorder loadedTextureCountRecorder;//描画だけでなくロードされているテクスチャのメモリ消費
+    ProfilerRecorder loadedTextureMemoryRecorder;
+    ProfilerRecorder loadedMeshCountRecorder;
+    ProfilerRecorder loadedMeshMemoryRecorder;
+    ProfilerRecorder loadedMaterialCountRecorder;
+    ProfilerRecorder loadedMaterialMemoryRecorder;
     //GabageCollection
     ProfilerRecorder gcAlocCountRecorder;
     ProfilerRecorder gcAlocMemoryRecorder;
@@ -82,6 +78,12 @@ public class PerformanceMonitor : MonoBehaviour{
 
     private float updateInterval = 1.0f; // 更新間隔（秒）
     private float lastUpdateTime = 0f;
+    void Awake()
+    {
+    #if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Profiler.enabled = true;
+    #endif
+    }
 
     void Start(){
         // FlopsManagerを取得
@@ -103,38 +105,35 @@ public class PerformanceMonitor : MonoBehaviour{
     void OnEnable(){
         //RenderingPlofiler
         //全体的指標
-        setPassCallsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count", 15);
-        drawCallsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count", 15);
-        totalBatchCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Batches Count", 15);
-        trianglesRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count", 15);
-        //static関連指標
-        staticBatchDrawCallRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Static Batched Draw Calls Count", 15);
-        staticBatchCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Static Batches Count", 15);
-        staticBatchTrianglesRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Static Batched Triangles Count", 15);
+        setPassCallsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "SetPass Calls Count", 1);
+        drawCallsRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Draw Calls Count", 10);
+        totalBatchCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Batches Count", 10);
+        trianglesRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Triangles Count", 10);
         //Instance関連指標
-        instanceBatchDrawCallRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Instanced Batched Draw Calls Count", 15);
-        instanceBatchCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Instanced Batches Count", 15);
-        instanceBatchTrianglesRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Instanced Batched Triangles Count", 15);
+        instanceBatchDrawCallRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Instanced Batched Draw Calls Count", 10);
+        instanceBatchCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Instanced Batches Count", 10);
+        instanceBatchTrianglesRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Instanced Batched Triangles Count", 10);
         //アセット関連指標
-        textureCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Count");
-        textureMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Bytes");
+        usedTextureCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Count", 50);
+        usedTextureMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Bytes", 50);
         //CPU処理時間
-        totalTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Total Frame Time", 15);
-        mainThreadTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Main Thread Frame Time", 15);
-        renderThreadTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Render Thread Frame Time", 15); 
-        gpuTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "GPU Frame Time", 15); 
+        cpuTotalTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Total Frame Time", 30);
+        cpuMainThreadTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Main Thread Frame Time", 30);
+        cpuRenderThreadTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Render Thread Frame Time", 30); 
+        gpuTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "GPU Frame Time", 30); 
         //Memory関連
-        totalMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Total Used Memory", 15);
-        textureCountRecorder2 = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Texture Count", 15);
-        meshCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Mesh Count", 15);
-        meshMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Mesh Memory", 15);
-        materialCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Material Count", 15);
-        materialMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Material Memory", 15);
+        totalMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Total Used Memory", 100);
+        loadedTextureCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Texture Count", 100);
+        loadedTextureMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Texture Memory", 100);
+        loadedMeshCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Mesh Count", 100);
+        loadedMeshMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Mesh Memory", 100);
+        loadedMaterialCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Material Count", 100);
+        loadedMaterialMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Material Memory", 100);
         //GabageCollection
-        gcAlocCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocation In Frame Count", 15);
-        gcAlocMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame", 15);
-        gcMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Used Memory", 15);
-        gcReservedMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Reserved Memory", 15);
+        gcAlocCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocation In Frame Count", 200);
+        gcAlocMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame", 200);
+        gcMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Used Memory", 200);
+        gcReservedMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Reserved Memory", 200);
     }
 
     void OnDisable(){
@@ -144,29 +143,26 @@ public class PerformanceMonitor : MonoBehaviour{
         drawCallsRecorder.Dispose();
         totalBatchCountRecorder.Dispose();
         trianglesRecorder.Dispose();
-        //static関連指標
-        staticBatchDrawCallRecorder.Dispose();
-        staticBatchCountRecorder.Dispose();
-        staticBatchTrianglesRecorder.Dispose();
         //Instance関連指標
         instanceBatchDrawCallRecorder.Dispose();
         instanceBatchCountRecorder.Dispose();
         instanceBatchTrianglesRecorder.Dispose();
         //アセット関連指標
-        textureCountRecorder.Dispose();
-        textureMemoryRecorder.Dispose();
+        usedTextureCountRecorder.Dispose();
+        usedTextureMemoryRecorder.Dispose();
         //CPU処理時間
-        totalTimeRecorder.Dispose();
-        mainThreadTimeRecorder.Dispose();
-        renderThreadTimeRecorder.Dispose();
+        cpuTotalTimeRecorder.Dispose();
+        cpuMainThreadTimeRecorder.Dispose();
+        cpuRenderThreadTimeRecorder.Dispose();
         gpuTimeRecorder.Dispose();
         //Memory関連
-        totalMemoryRecorder.Dispose();
-        textureCountRecorder2.Dispose();
-        meshCountRecorder.Dispose();
-        meshMemoryRecorder.Dispose();
-        materialCountRecorder.Dispose();
-        materialMemoryRecorder.Dispose();
+        cpuTotalTimeRecorder.Dispose();
+        loadedTextureCountRecorder.Dispose();
+        loadedTextureMemoryRecorder.Dispose();
+        loadedMeshCountRecorder.Dispose();
+        loadedMeshMemoryRecorder.Dispose();
+        loadedMaterialCountRecorder.Dispose();
+        loadedMaterialMemoryRecorder.Dispose();
         //GabageCollection
         gcAlocCountRecorder.Dispose();
         gcAlocMemoryRecorder.Dispose();
@@ -241,52 +237,55 @@ public class PerformanceMonitor : MonoBehaviour{
         performanceText.text = GetWindowsPerformanceText(
             fps,
             drawCallsRecorder.LastValue, setPassCallsRecorder.LastValue, totalBatchCountRecorder.LastValue, trianglesRecorder.LastValue,
-            staticBatchDrawCallRecorder.LastValue, staticBatchCountRecorder.LastValue, staticBatchTrianglesRecorder.LastValue, 
             instanceBatchDrawCallRecorder.LastValue, instanceBatchCountRecorder.LastValue, instanceBatchTrianglesRecorder.LastValue,
-            textureCountRecorder.LastValue, textureMemoryRecorder.LastValue,                 
-            totalTimeRecorder.LastValue, mainThreadTimeRecorder.LastValue, renderThreadTimeRecorder.LastValue, gpuTimeRecorder.LastValue,
-            totalMemoryRecorder.LastValue, textureCountRecorder2.LastValue, meshCountRecorder.LastValue,
-            meshMemoryRecorder.LastValue, materialCountRecorder.LastValue, materialMemoryRecorder.LastValue,
+            usedTextureCountRecorder.LastValue, usedTextureMemoryRecorder.LastValue,                 
+            cpuTotalTimeRecorder.LastValue, cpuMainThreadTimeRecorder.LastValue, cpuRenderThreadTimeRecorder.LastValue, gpuTimeRecorder.LastValue,
+            totalMemoryRecorder.LastValue, loadedTextureCountRecorder.LastValue, loadedTextureMemoryRecorder.LastValue, 
+            loadedMeshCountRecorder.LastValue,loadedMeshMemoryRecorder.LastValue, 
+            loadedMaterialCountRecorder.LastValue, loadedMaterialMemoryRecorder.LastValue,
             gcAlocCountRecorder.LastValue, gcAlocMemoryRecorder.LastValue, gcMemoryRecorder.LastValue, gcReservedMemoryRecorder.LastValue
         );
     }
 
     string GetWindowsPerformanceText(float fps, 
                                     long drawcalls, long setpasscalls, long batches, long triangles, 
-                                    long staticDrawcalls , long staticBatches, long staticTriangles,
                                     long instanceDrawcalls, long instanceBatches, long instanceTriangles,
-                                    long textureCount, long textureMemory, long renderThreadTime ,
-                                    long totalTime, long mainThreadTime, long gpuTime,
-                                    long totalMemory, long textureCount2, long meshCount, long meshMemory,
-                                    long materialCount, long materialMemory, 
+                                    long usedTextureCount, long usedTextureMemory,
+                                    long cpuTotalTime, long cpuMainThreadTime, long cpuRenderThread, long gpuTime,
+                                    long totalMemory, long loadedTextureCount, long loadedTextureMemory,
+                                    long loadedMeshCount, long loadedMeshMemory,
+                                    long loadedMaterialCount, long loadedMaterialMemory, 
                                     long gcAlocCount, long gcAlocMemory, long gcMemory, long gcReservedMemory){
-        string text = $"{((int)fps).ToString("N0").PadLeft(3)} fps\n" +
-                      $"{((int)drawcalls).ToString("N0").PadLeft(3)} Drawcalls\n" +
-                      $"{((int)setpasscalls).ToString("N0").PadLeft(3)} Setpasscalls\n" +
-                      $"{((int)batches).ToString("N0").PadLeft(3)} Batches\n" +
-                      $"{((int)triangles/1000).ToString("N0").PadLeft(3)} K Triangles\n" +
-                      $"{((int)staticDrawcalls).ToString("N0").PadLeft(3)} Drawcalls(Statie)\n" +
-                      $"{((int)staticBatches).ToString("N0").PadLeft(3)} Batches(Static)\n" +
-                      $"{((int)staticTriangles/1000).ToString("N0").PadLeft(3)} K Triangles(Static)\n" +
-                      $"{((int)instanceDrawcalls).ToString("N0").PadLeft(3)} Drawcalls(GPU)\n" +
-                      $"{((int)instanceBatches).ToString("N0").PadLeft(3)} Batches(GPU)\n" +
-                      $"{((int)instanceTriangles/1000).ToString("N0").PadLeft(3)} K Triangles(GPU)\n" +
-                      $"{((int)textureCount).ToString("N0").PadLeft(3)} 枚 \n" +  
-                      $"{textureMemory/1024/1024,5:0000.0} MB(Textureメモリ) \n" +
-                      $"{renderThreadTime/1_000_000f,4:00.00} ミリ秒(CPU Total) \n" +
-                      $"{totalTime/ 1_000_000f,4:00.00} ミリ秒(CPU Total) \n" +
-                      $"{mainThreadTime/ 1_000_000f,4:00.00} ミリ秒(CPU mainThreadTime) \n" +
-                      $"{gpuTime/ 1_000_000f,4:00.00} ミリ秒(GPU) \n" +
-                      $"{totalMemory/1024/1024,5:0000.0} MB(Total Memory) \n" +
-                      $"{((int)textureCount2).ToString("N0").PadLeft(3)} 枚 \n" +  
-                      $"{((int)meshCount).ToString("N0").PadLeft(3)} Mesh \n" + 
-                      $"{meshMemory/1024/1024,5:0000.0} MB(Mesh Memory) \n" +
-                      $"{((int)materialCount).ToString("N0").PadLeft(3)} Material \n" +
-                      $"{materialMemory/1024/1024,5:0000.0} MB(Material Memory) \n" +
-                      $"{((int)gcAlocCount).ToString("N0").PadLeft(3)} 回（GC Allocated In Frame） \n" + 
-                      $"{gcAlocMemory/1024/1024,5:0000.0} MB(GC Allocated In Frame) \n" +
-                      $"{gcMemory/1024/1024,5:0000.0} MB(GC Used Memory) \n" +
-                      $"{gcReservedMemory/1024/1024,5:0000.0} MB(GC Reserved Memory) ";
+        string text = $"【FPS】\n" +
+                      $"{((int)fps).ToString("0").PadLeft(7)} Fps\n" +
+                      $"{((int)setpasscalls).ToString("0").PadLeft(7)} Setpasscalls\n" +
+                      $"{((int)drawcalls).ToString("0").PadLeft(7)} Drawcalls\n" +
+                      $"{((int)instanceDrawcalls).ToString("0").PadLeft(7)} Drawcalls（GPUインスタンス）\n" +
+                      $"{((int)batches).ToString("0").PadLeft(7)} Batches\n" +
+                      $"{((int)instanceBatches).ToString("0").PadLeft(7)} Batches（GPUインスタンス）\n" +
+                      $"{((int)triangles/1000).ToString("0").PadLeft(7)} K Triangles\n" +
+                      $"{((int)instanceTriangles/1000).ToString("0").PadLeft(7)} K Triangles（GPUインスタンス）\n" +
+                      $"【Texture】\n" +
+                      $"{((int)usedTextureCount).ToString("0").PadLeft(7)} 枚（描画テクスチャ） \n" +  
+                      $"{usedTextureMemory/1024/1024, 7:F2} MB（描画テクスチャMemory消費） \n" +
+                      $"{((int)loadedTextureCount).ToString("0").PadLeft(7)} 枚（読込テクスチャ） \n" +  
+                      $"{loadedTextureMemory/1024/1024, 7:F2} MB（読込テクスチャMemory消費) \n" +
+                      $"【CPU処理時間】\n" +
+                      $"{cpuTotalTime/1_000_000f, 7:F2} ミリ秒（総CPU処理時間) \n" +
+                      $"{cpuMainThreadTime/ 1_000_000f, 7:F2} ミリ秒（CPUメインスレッド処理時間) \n" +
+                      $"{cpuRenderThread/ 1_000_000f, 7:F2} ミリ秒（CPU描画スレッド処理時間) \n" +
+                      $"{gpuTime/ 1_000_000f, 7:F2} ミリ秒（GPU処理時間) \n" +
+                      $"【メモリ消費】\n" +
+                      $"{totalMemory/1024/1024, 7:F2} MB（総Memory消費) \n" +
+                      $"{((int)loadedMeshCount).ToString("N0").PadLeft(7)} 個（読込Mesh数） \n" + 
+                      $"{loadedMeshMemory/1024/1024, 7:F2} MB（読込Meshメモリ消費) \n" +
+                      $"{((int)loadedMaterialCount).ToString("N0").PadLeft(7)} 個（読込Material数） \n" +
+                      $"{loadedMaterialMemory/1024/1024, 7:F2} MB（読込Materialメモリ消費) \n" +
+                      $"【GabageCollection】\n" +
+                      $"{((int)gcAlocCount).ToString("N0").PadLeft(7)} 回（発生GC回数/Frame） \n" + 
+                      $"{gcAlocMemory/1024/1024, 7:F2} MB（確保GC Memory量/Frame) \n" +
+                      $"{gcMemory/1024/1024, 7:F2} MB（使用中GC Memory) \n" +
+                      $"{gcReservedMemory/1024/1024, 7:F2} MB（予約済GC Memory) ";
                       
                       
                       
