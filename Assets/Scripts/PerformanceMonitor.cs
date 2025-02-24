@@ -54,6 +54,8 @@ public class PerformanceMonitor : MonoBehaviour{
     //アセット関連指標
     ProfilerRecorder usedTextureCountRecorder;//描画に使用されたTexture枚数
     ProfilerRecorder usedTextureMemoryRecorder;//描画に使用されたTextureメモリ
+    ProfilerRecorder shadowCastersCountRecorder;
+
     //CPU処理時間
     ProfilerRecorder cpuTotalTimeRecorder;//総CPU処理時間
     ProfilerRecorder cpuMainThreadTimeRecorder;//CPUメインスレッド処理時間
@@ -61,6 +63,13 @@ public class PerformanceMonitor : MonoBehaviour{
     ProfilerRecorder gpuTimeRecorder;//GPU描画にかかった時間/frame
     //Memory関連
     ProfilerRecorder totalMemoryRecorder;//総メモリ消費
+    ProfilerRecorder systemMemoryRecorder;
+    ProfilerRecorder profilerMemoryRecorder;
+    ProfilerRecorder monoHeapSizeRecorder;
+    ProfilerRecorder nativeHeapSizeRecorder;
+    //GPUメモリ（VRAM）消費
+    ProfilerRecorder gpuUsedMemoryRecorder;
+    ProfilerRecorder gpuReservedMemoryRecorder;
     ProfilerRecorder loadedTextureCountRecorder;//描画だけでなくロードされているテクスチャのメモリ消費
     ProfilerRecorder loadedTextureMemoryRecorder;
     ProfilerRecorder loadedMeshCountRecorder;
@@ -72,10 +81,11 @@ public class PerformanceMonitor : MonoBehaviour{
     ProfilerRecorder gcAlocMemoryRecorder;
     ProfilerRecorder gcMemoryRecorder;
     ProfilerRecorder gcReservedMemoryRecorder;
-
+    //UI関連
+    ProfilerRecorder cumulativeBatchCountRecorder;
+    ProfilerRecorder cumulativeVertexCountRecorder;
+    ProfilerRecorder gameObjectCountRecorder;
     
-
-
     private float updateInterval = 1.0f; // 更新間隔（秒）
     private float lastUpdateTime = 0f;
     void Awake()
@@ -116,6 +126,7 @@ public class PerformanceMonitor : MonoBehaviour{
         //アセット関連指標
         usedTextureCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Count", 50);
         usedTextureMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Used Textures Bytes", 50);
+        shadowCastersCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Render, "Shadow Casters Count", 50);
         //CPU処理時間
         cpuTotalTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Total Frame Time", 30);
         cpuMainThreadTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "CPU Main Thread Frame Time", 30);
@@ -123,6 +134,11 @@ public class PerformanceMonitor : MonoBehaviour{
         gpuTimeRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Internal, "GPU Frame Time", 30); 
         //Memory関連
         totalMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Total Used Memory", 100);
+        systemMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "System Used Memory", 100);
+        profilerMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Profiler Used Memory", 100);
+        //GPUメモリ（VRAM）消費
+        gpuUsedMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Gfx Used Memory", 100);
+        gpuReservedMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Gfx Reserved Memory", 100);
         loadedTextureCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Texture Count", 100);
         loadedTextureMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Texture Memory", 100);
         loadedMeshCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "Mesh Count", 100);
@@ -134,6 +150,11 @@ public class PerformanceMonitor : MonoBehaviour{
         gcAlocMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Allocated In Frame", 200);
         gcMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Used Memory", 200);
         gcReservedMemoryRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Memory, "GC Reserved Memory", 200);
+        //UI関連
+        cumulativeBatchCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Gui, "Cumulative Batch Count", 10);
+        cumulativeVertexCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Gui, "Cumulative Vertex Count", 10);
+        gameObjectCountRecorder = ProfilerRecorder.StartNew(ProfilerCategory.Gui, "GameObject Count", 10);
+
     }
 
     void OnDisable(){
@@ -150,6 +171,7 @@ public class PerformanceMonitor : MonoBehaviour{
         //アセット関連指標
         usedTextureCountRecorder.Dispose();
         usedTextureMemoryRecorder.Dispose();
+        shadowCastersCountRecorder.Dispose();
         //CPU処理時間
         cpuTotalTimeRecorder.Dispose();
         cpuMainThreadTimeRecorder.Dispose();
@@ -157,6 +179,11 @@ public class PerformanceMonitor : MonoBehaviour{
         gpuTimeRecorder.Dispose();
         //Memory関連
         cpuTotalTimeRecorder.Dispose();
+        systemMemoryRecorder.Dispose();
+        profilerMemoryRecorder.Dispose();
+        //GPU関連
+        gpuUsedMemoryRecorder.Dispose();
+        gpuReservedMemoryRecorder.Dispose();
         loadedTextureCountRecorder.Dispose();
         loadedTextureMemoryRecorder.Dispose();
         loadedMeshCountRecorder.Dispose();
@@ -166,8 +193,11 @@ public class PerformanceMonitor : MonoBehaviour{
         //GabageCollection
         gcAlocCountRecorder.Dispose();
         gcAlocMemoryRecorder.Dispose();
-        gcMemoryRecorder.Dispose();
         gcReservedMemoryRecorder.Dispose();
+        //UI関連
+        cumulativeBatchCountRecorder.Dispose();
+        cumulativeVertexCountRecorder.Dispose();
+        gameObjectCountRecorder.Dispose();
 
     }
 
@@ -236,26 +266,35 @@ public class PerformanceMonitor : MonoBehaviour{
         // 変化が5%以上あったら更新
         performanceText.text = GetWindowsPerformanceText(
             fps,
-            drawCallsRecorder.LastValue, setPassCallsRecorder.LastValue, totalBatchCountRecorder.LastValue, trianglesRecorder.LastValue,
+            drawCallsRecorder.LastValue, setPassCallsRecorder.LastValue, 
+            totalBatchCountRecorder.LastValue, trianglesRecorder.LastValue,
             instanceBatchDrawCallRecorder.LastValue, instanceBatchCountRecorder.LastValue, instanceBatchTrianglesRecorder.LastValue,
-            usedTextureCountRecorder.LastValue, usedTextureMemoryRecorder.LastValue,                 
+            usedTextureCountRecorder.LastValue, usedTextureMemoryRecorder.LastValue, shadowCastersCountRecorder.LastValue,               
             cpuTotalTimeRecorder.LastValue, cpuMainThreadTimeRecorder.LastValue, cpuRenderThreadTimeRecorder.LastValue, gpuTimeRecorder.LastValue,
-            totalMemoryRecorder.LastValue, loadedTextureCountRecorder.LastValue, loadedTextureMemoryRecorder.LastValue, 
+            totalMemoryRecorder.LastValue, systemMemoryRecorder.LastValue, profilerMemoryRecorder.LastValue,
+            gpuUsedMemoryRecorder.LastValue, gpuReservedMemoryRecorder.LastValue,
+            loadedTextureCountRecorder.LastValue, loadedTextureMemoryRecorder.LastValue, 
             loadedMeshCountRecorder.LastValue,loadedMeshMemoryRecorder.LastValue, 
             loadedMaterialCountRecorder.LastValue, loadedMaterialMemoryRecorder.LastValue,
-            gcAlocCountRecorder.LastValue, gcAlocMemoryRecorder.LastValue, gcMemoryRecorder.LastValue, gcReservedMemoryRecorder.LastValue
+            gcAlocCountRecorder.LastValue, gcAlocMemoryRecorder.LastValue, gcMemoryRecorder.LastValue, gcReservedMemoryRecorder.LastValue,
+            cumulativeBatchCountRecorder.LastValue, cumulativeVertexCountRecorder.LastValue, gameObjectCountRecorder.LastValue
         );
     }
 
     string GetWindowsPerformanceText(float fps, 
-                                    long drawcalls, long setpasscalls, long batches, long triangles, 
+                                    long drawcalls, long setpasscalls, 
+                                    long batches, long triangles, 
                                     long instanceDrawcalls, long instanceBatches, long instanceTriangles,
-                                    long usedTextureCount, long usedTextureMemory,
+                                    long usedTextureCount, long usedTextureMemory, long shadowCastersCount,
                                     long cpuTotalTime, long cpuMainThreadTime, long cpuRenderThread, long gpuTime,
-                                    long totalMemory, long loadedTextureCount, long loadedTextureMemory,
+                                    long totalMemory, long  systemMemory, long profilerMemory,
+                                    long gpuUsedMemory, long gpuReservedMemory,
+                                    long loadedTextureCount, long loadedTextureMemory,
                                     long loadedMeshCount, long loadedMeshMemory,
                                     long loadedMaterialCount, long loadedMaterialMemory, 
-                                    long gcAlocCount, long gcAlocMemory, long gcMemory, long gcReservedMemory){
+                                    long gcAlocCount, long gcAlocMemory, long gcMemory, long gcReservedMemory,
+                                    long cumulativeBatchCount, long cumulativeVertexCount, long gameObjectCount
+                                    ){
         string text = $"【FPS】\n" +
                       $"{((int)fps).ToString("0").PadLeft(7)} Fps\n" +
                       $"{((int)setpasscalls).ToString("0").PadLeft(7)} Setpasscalls\n" +
@@ -267,16 +306,22 @@ public class PerformanceMonitor : MonoBehaviour{
                       $"{((int)instanceTriangles/1000).ToString("0").PadLeft(7)} K Triangles（GPUインスタンス）\n" +
                       $"【Texture】\n" +
                       $"{((int)usedTextureCount).ToString("0").PadLeft(7)} 枚（描画テクスチャ） \n" +  
-                      $"{usedTextureMemory/1024/1024, 7:F2} MB（描画テクスチャMemory消費） \n" +
-                      $"{((int)loadedTextureCount).ToString("0").PadLeft(7)} 枚（読込テクスチャ） \n" +  
-                      $"{loadedTextureMemory/1024/1024, 7:F2} MB（読込テクスチャMemory消費) \n" +
+                      $"{((int)loadedTextureCount).ToString("0").PadLeft(7)} 枚（読込テクスチャ） \n" + 
+                      $"{((int)shadowCastersCount).ToString("0").PadLeft(7)} 個（shadowキャスター） \n" +
                       $"【CPU処理時間】\n" +
                       $"{cpuTotalTime/1_000_000f, 7:F2} ミリ秒（総CPU処理時間) \n" +
                       $"{cpuMainThreadTime/ 1_000_000f, 7:F2} ミリ秒（CPUメインスレッド処理時間) \n" +
                       $"{cpuRenderThread/ 1_000_000f, 7:F2} ミリ秒（CPU描画スレッド処理時間) \n" +
                       $"{gpuTime/ 1_000_000f, 7:F2} ミリ秒（GPU処理時間) \n" +
-                      $"【メモリ消費】\n" +
+                      $"【CPUメモリ消費】\n" +
                       $"{totalMemory/1024/1024, 7:F2} MB（総Memory消費) \n" +
+                      $"{systemMemory/1024/1024, 7:F2} MB（予約済みメモリ容量) \n" +
+                      $"{profilerMemory/1024/1024, 7:F2} MB（Profilerメモリ消費) \n" +
+                      $"【GPUメモリ消費】\n" +
+                      $"{gpuUsedMemory/1024/1024, 7:F2} MB（総VRAM消費） \n" +
+                      $"{gpuReservedMemory/1024/1024, 7:F2} MB（予約済VRAM容量） \n" +
+                      $"{usedTextureMemory/1024/1024, 7:F2} MB（描画テクスチャMemory消費） \n" +
+                      $"{loadedTextureMemory/1024/1024, 7:F2} MB（読込テクスチャMemory消費) \n" +
                       $"{((int)loadedMeshCount).ToString("N0").PadLeft(7)} 個（読込Mesh数） \n" + 
                       $"{loadedMeshMemory/1024/1024, 7:F2} MB（読込Meshメモリ消費) \n" +
                       $"{((int)loadedMaterialCount).ToString("N0").PadLeft(7)} 個（読込Material数） \n" +
@@ -285,8 +330,11 @@ public class PerformanceMonitor : MonoBehaviour{
                       $"{((int)gcAlocCount).ToString("N0").PadLeft(7)} 回（発生GC回数/Frame） \n" + 
                       $"{gcAlocMemory/1024/1024, 7:F2} MB（確保GC Memory量/Frame) \n" +
                       $"{gcMemory/1024/1024, 7:F2} MB（使用中GC Memory) \n" +
-                      $"{gcReservedMemory/1024/1024, 7:F2} MB（予約済GC Memory) ";
-                      
+                      $"{gcReservedMemory/1024/1024, 7:F2} MB（予約済GC Memory) \n" +
+                      $"【UI関連】\n" +
+                      $"{((int)cumulativeBatchCount).ToString("0").PadLeft(7)} 回（Canvas内Batch数）\n" +
+                      $"{((int)cumulativeVertexCount).ToString("0").PadLeft(7)} 頂点（Canvas内頂点数）\n" +
+                      $"{((int)gameObjectCount).ToString("0").PadLeft(7)} 個（Canvas内オブジェクト数） ";
                       
                       
         return text;
