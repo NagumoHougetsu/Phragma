@@ -397,7 +397,7 @@ public class FlopsManager : MonoBehaviour
             tempFps = GetSnapdragonEquivalentFPS(fps, snapdragon8Gen2TotalFLOPS);
             snapdragon8Gen2_fps.text = $"{tempFps:F1}fps";
             SetTextColorBasedOnFPS(snapdragon8Gen2_fps, tempFps);
-
+            /*
             // 各 SoC に対して換算 Memory を表示
             float memory = performanceMonitor.memory;
             snapdragon660_memory.text = $"{memory:N0}MB";
@@ -622,6 +622,7 @@ public class FlopsManager : MonoBehaviour
             SetTextColorBasedOnThreshold(a16_triangles, triangles, a16_trianglesThreshold);
             a17_triangles.text = $"{triangles:N0}tris";
             SetTextColorBasedOnThreshold(a17_triangles, triangles, a17_trianglesThreshold);
+            */
         }
     }
 }

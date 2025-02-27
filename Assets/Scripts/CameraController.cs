@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class CameraController : MonoBehaviour {
     public Transform fpsCamera;  // FPS用カメラ
@@ -36,13 +35,11 @@ public class CameraController : MonoBehaviour {
         } else {
             Debug.LogError("SceneManagerまたはcharacterPrefabが設定されていません！");
         }
-
-       
     }
 
     void Update() {
         // Cキーでカメラ切り替え
-        if (Keyboard.current.cKey.wasPressedThisFrame) {
+        if (Input.GetKeyDown(KeyCode.C)) {
             ToggleCameraMode();
         }
 
@@ -60,7 +57,6 @@ public class CameraController : MonoBehaviour {
             tpsCamera.LookAt(playerTransform);  // プレイヤーを見つめる
         }
     }
-
 
     public void ToggleCameraMode() {
         isFPS = !isFPS;

@@ -25,6 +25,8 @@ public class PerformanceMonitor : MonoBehaviour{
     private string currentTab = "Windows";  // 現在のタブ情報（デフォルトはWindows）
 
     private FlopsManager flopsManager;
+    private EnvironmentManager envManager;
+
     private ProfilerRecorder cpuRecorder;
     private ProfilerRecorder gpuRecorder;
 
@@ -110,6 +112,15 @@ public class PerformanceMonitor : MonoBehaviour{
         if (currentTab == "Windows"){
             InvokeRepeating(nameof(UpdatePerformanceText), 0f, updateInterval);
         }
+
+        envManager = FindObjectOfType<EnvironmentManager>();
+        if (envManager != null && envManager.currentActivePrefab != null) {
+            string prefabName = envManager.currentActivePrefab.name;
+            Debug.Log("現在のアクティブなPrefab名: " + prefabName);
+        } else {
+            Debug.LogWarning("EnvironmentManager または currentActivePrefab が見つかりません！");
+        }
+
     }
 
     void OnEnable(){
@@ -212,7 +223,7 @@ public class PerformanceMonitor : MonoBehaviour{
             timer = 0f;
             frameCount = 0;
             UpdatePerformanceText(); // FPSを更新
-        }
+        }        
     }
 
     private void SwitchTab(string tabName, Button clickedButton, GameObject panel){
@@ -264,6 +275,7 @@ public class PerformanceMonitor : MonoBehaviour{
     void UpdatePerformanceText(){
         // ここで最新の値を取得して表示
         // 変化が5%以上あったら更新
+
         performanceText.text = GetWindowsPerformanceText(
             fps,
             drawCallsRecorder.LastValue, setPassCallsRecorder.LastValue, 
@@ -295,7 +307,12 @@ public class PerformanceMonitor : MonoBehaviour{
                                     long gcAlocCount, long gcAlocMemory, long gcMemory, long gcReservedMemory,
                                     long cumulativeBatchCount, long cumulativeVertexCount, long gameObjectCount
                                     ){
-        string text = $"【FPS】\n" +
+        string prefabName = (envManager != null && envManager.currentActivePrefab != null) 
+            ? envManager.currentActivePrefab.name 
+            : "None";  // Prefabがない場合は "None" を表示
+
+        string text = $"【現在のPrefab】 {prefabName}\n" +
+                      $"【FPS】\n" +
                       $"{((int)fps).ToString("0").PadLeft(7)} Fps\n" +
                       $"{((int)setpasscalls).ToString("0").PadLeft(7)} Setpasscalls\n" +
                       $"{((int)drawcalls).ToString("0").PadLeft(7)} Drawcalls\n" +
