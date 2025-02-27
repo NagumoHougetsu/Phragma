@@ -5,7 +5,7 @@ public class EnvironmentManager : MonoBehaviour{
     [Header("Environment Prefabs")]
     public GameObject[] environmentPrefabs;
     private int currentIndex = 0;
-    private GameObject currentActivePrefab = null;
+    public GameObject currentActivePrefab = null;
     private bool isProcessing = false; // ボタン連打防止フラグ
 
     [Header("UI Elements")]
