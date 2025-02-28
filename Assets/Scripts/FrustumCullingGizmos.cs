@@ -83,10 +83,7 @@ public class FrustumCullingGizmos : MonoBehaviour
 
         if (!isFrustumCullingEnabled && allRenderers != null)
         {
-            foreach (Renderer rend in allRenderers)
-            {
-                if (rend != null) rend.enabled = true;
-            }
+            RestoreRenderers();
         }
 
         UpdateButtonColor();
@@ -115,4 +112,40 @@ public class FrustumCullingGizmos : MonoBehaviour
         }
     }
     #endif
+
+    void RestoreRenderers()
+    {
+        // MeshRendererの表示を元に戻す
+        if (allRenderers != null)
+        {
+            foreach (Renderer rend in allRenderers)
+            {
+                if (rend != null) rend.enabled = true;
+            }
+        }
+
+        // SkinnedMeshRendererも表示を戻す
+        SkinnedMeshRenderer[] skinnedMeshRenderers = FindObjectsOfType<SkinnedMeshRenderer>(true); // 非アクティブも検索
+        foreach (SkinnedMeshRenderer skinnedRenderer in skinnedMeshRenderers)
+        {
+            if (skinnedRenderer != null)
+            {
+                skinnedRenderer.enabled = true;
+                if (!skinnedRenderer.gameObject.activeInHierarchy)
+                {
+                    skinnedRenderer.gameObject.SetActive(true);
+                }
+            }
+        }
+    }
+
+    void OnDisable()
+    {
+        RestoreRenderers();
+    }
+
+    void OnDestroy()
+    {
+        RestoreRenderers();
+    }
 }
