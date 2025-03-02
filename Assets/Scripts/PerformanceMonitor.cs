@@ -10,7 +10,17 @@ using UnityEditor; // UnityStatsのために必要
 
 
 public class PerformanceMonitor : MonoBehaviour{
-    public Text performanceText;
+    public Text prefabNameText;
+    public Text prefabNoteText;
+    public Text fpsText;
+    public Text drawTexure;
+    public Text shadowCaster;
+    public Text callsText;
+    public Text callsGpuText;
+    public Text processorText;
+    public Text cpuMemoryText;
+    public Text gpuMemoryText;
+    public Text gcText;
     public Button windowsTabButton;
     public Button snapdragonTabButton;
     public Button iOSTabButton;
@@ -216,7 +226,6 @@ public class PerformanceMonitor : MonoBehaviour{
     }
 
     void Update(){
-        if (performanceText == null) return;
         // フレームごとに時間を加算
         timer += Time.unscaledDeltaTime;
         frameCount++;
@@ -226,6 +235,13 @@ public class PerformanceMonitor : MonoBehaviour{
             timer = 0f;
             frameCount = 0;
             UpdatePerformanceText(); // FPSを更新
+            cpuUsage = cpuTotalTimeRecorder.LastValue/1_000_000f;
+            gpuUsage = gpuTimeRecorder.LastValue/ 1_000_000f;
+            memory = totalMemoryRecorder.LastValue/1024/1024;
+            drawCalls = (int)drawCallsRecorder.LastValue;
+            setPassCalls = (int)setPassCallsRecorder.LastValue;
+            batches = (int)totalBatchCountRecorder.LastValue;
+            triangles = (int)trianglesRecorder.LastValue/1000;
         }        
     }
 
@@ -278,86 +294,70 @@ public class PerformanceMonitor : MonoBehaviour{
     void UpdatePerformanceText(){
         // ここで最新の値を取得して表示
         // 変化が5%以上あったら更新
-
-        performanceText.text = GetWindowsPerformanceText(
-            fps,
-            drawCallsRecorder.LastValue, setPassCallsRecorder.LastValue, 
-            totalBatchCountRecorder.LastValue, trianglesRecorder.LastValue,
-            instanceBatchDrawCallRecorder.LastValue, instanceBatchCountRecorder.LastValue, instanceBatchTrianglesRecorder.LastValue,
-            usedTextureCountRecorder.LastValue, usedTextureMemoryRecorder.LastValue, shadowCastersCountRecorder.LastValue,               
-            cpuTotalTimeRecorder.LastValue, cpuMainThreadTimeRecorder.LastValue, cpuRenderThreadTimeRecorder.LastValue, gpuTimeRecorder.LastValue,
-            totalMemoryRecorder.LastValue, systemMemoryRecorder.LastValue, profilerMemoryRecorder.LastValue,
-            gpuUsedMemoryRecorder.LastValue, gpuReservedMemoryRecorder.LastValue,
-            loadedTextureCountRecorder.LastValue, loadedTextureMemoryRecorder.LastValue, 
-            loadedMeshCountRecorder.LastValue,loadedMeshMemoryRecorder.LastValue, 
-            loadedMaterialCountRecorder.LastValue, loadedMaterialMemoryRecorder.LastValue,
-            gcAlocCountRecorder.LastValue, gcAlocMemoryRecorder.LastValue, gcMemoryRecorder.LastValue, gcReservedMemoryRecorder.LastValue,
-            cumulativeBatchCountRecorder.LastValue, cumulativeVertexCountRecorder.LastValue, gameObjectCountRecorder.LastValue
-        );
-    }
-
-    string GetWindowsPerformanceText(float fps, 
-                                    long drawcalls, long setpasscalls, 
-                                    long batches, long triangles, 
-                                    long instanceDrawcalls, long instanceBatches, long instanceTriangles,
-                                    long usedTextureCount, long usedTextureMemory, long shadowCastersCount,
-                                    long cpuTotalTime, long cpuMainThreadTime, long cpuRenderThread, long gpuTime,
-                                    long totalMemory, long  systemMemory, long profilerMemory,
-                                    long gpuUsedMemory, long gpuReservedMemory,
-                                    long loadedTextureCount, long loadedTextureMemory,
-                                    long loadedMeshCount, long loadedMeshMemory,
-                                    long loadedMaterialCount, long loadedMaterialMemory, 
-                                    long gcAlocCount, long gcAlocMemory, long gcMemory, long gcReservedMemory,
-                                    long cumulativeBatchCount, long cumulativeVertexCount, long gameObjectCount
-                                    ){
         string prefabName = (envManager != null && envManager.CurrentActivePrefab != null) 
             ? envManager.CurrentActivePrefab.name 
             : "None";  // Prefabがない場合は "None" を表示
+        prefabNameText.text = $"【表示中のPrefab】{prefabName}";
 
-        string text = $"【現在のPrefab】 {prefabName}\n" +
-                      $"【FPS】\n" +
-                      $"{((int)fps).ToString("0").PadLeft(7)} Fps\n" +
-                      $"{((int)setpasscalls).ToString("0").PadLeft(7)} Setpasscalls\n" +
-                      $"{((int)drawcalls).ToString("0").PadLeft(7)} Drawcalls\n" +
-                      $"{((int)instanceDrawcalls).ToString("0").PadLeft(7)} Drawcalls（GPUインスタンス）\n" +
-                      $"{((int)batches).ToString("0").PadLeft(7)} Batches\n" +
-                      $"{((int)instanceBatches).ToString("0").PadLeft(7)} Batches（GPUインスタンス）\n" +
-                      $"{((int)triangles/1000).ToString("0").PadLeft(7)} K Triangles\n" +
-                      $"{((int)instanceTriangles/1000).ToString("0").PadLeft(7)} K Triangles（GPUインスタンス）\n" +
-                      $"【Texture】\n" +
-                      $"{((int)usedTextureCount).ToString("0").PadLeft(7)} 枚（描画テクスチャ） \n" +  
-                      $"{((int)loadedTextureCount).ToString("0").PadLeft(7)} 枚（読込テクスチャ） \n" + 
-                      $"{((int)shadowCastersCount).ToString("0").PadLeft(7)} 個（shadowキャスター） \n" +
-                      $"【CPU処理時間】\n" +
-                      $"{cpuTotalTime/1_000_000f, 7:F2} ミリ秒（総CPU処理時間) \n" +
-                      $"{cpuMainThreadTime/ 1_000_000f, 7:F2} ミリ秒（CPUメインスレッド処理時間) \n" +
-                      $"{cpuRenderThread/ 1_000_000f, 7:F2} ミリ秒（CPU描画スレッド処理時間) \n" +
-                      $"{gpuTime/ 1_000_000f, 7:F2} ミリ秒（GPU処理時間) \n" +
-                      $"【CPUメモリ消費】\n" +
-                      $"{totalMemory/1024/1024, 7:F2} MB（総Memory消費) \n" +
-                      $"{systemMemory/1024/1024, 7:F2} MB（予約済みメモリ容量) \n" +
-                      $"{profilerMemory/1024/1024, 7:F2} MB（Profilerメモリ消費) \n" +
-                      $"【GPUメモリ消費】\n" +
-                      $"{gpuUsedMemory/1024/1024, 7:F2} MB（総VRAM消費） \n" +
-                      $"{gpuReservedMemory/1024/1024, 7:F2} MB（予約済VRAM容量） \n" +
-                      $"{usedTextureMemory/1024/1024, 7:F2} MB（描画テクスチャMemory消費） \n" +
-                      $"{loadedTextureMemory/1024/1024, 7:F2} MB（読込テクスチャMemory消費) \n" +
-                      $"{((int)loadedMeshCount).ToString("N0").PadLeft(7)} 個（読込Mesh数） \n" + 
-                      $"{loadedMeshMemory/1024/1024, 7:F2} MB（読込Meshメモリ消費) \n" +
-                      $"{((int)loadedMaterialCount).ToString("N0").PadLeft(7)} 個（読込Material数） \n" +
-                      $"{loadedMaterialMemory/1024/1024, 7:F2} MB（読込Materialメモリ消費) \n" +
-                      $"【GabageCollection】\n" +
-                      $"{((int)gcAlocCount).ToString("N0").PadLeft(7)} 回（発生GC回数/Frame） \n" + 
-                      $"{gcAlocMemory/1024/1024, 7:F2} MB（確保GC Memory量/Frame) \n" +
-                      $"{gcMemory/1024/1024, 7:F2} MB（使用中GC Memory) \n" +
-                      $"{gcReservedMemory/1024/1024, 7:F2} MB（予約済GC Memory) \n" +
-                      $"【UI関連】\n" +
-                      $"{((int)cumulativeBatchCount).ToString("0").PadLeft(7)} 回（Canvas内Batch数）\n" +
-                      $"{((int)cumulativeVertexCount).ToString("0").PadLeft(7)} 頂点（Canvas内頂点数）\n" +
-                      $"{((int)gameObjectCount).ToString("0").PadLeft(7)} 個（Canvas内オブジェクト数） ";
-                      
-                      
-        return text;
+        PrefabNote prefabNote = envManager.CurrentActivePrefab.GetComponent<PrefabNote>();
+        prefabNoteText.text = $"【Note】\n{prefabNote.note}";
+
+        fpsText.text = $"【計測FPS】\n\t{((int)fps).ToString("0").PadLeft(4)} Fps";
+        
+        drawTexure.text =  $"【描画中Texture】\n" +
+                    $"\t{((int)usedTextureCountRecorder.LastValue).ToString("0").PadLeft(0)} 個";
+
+        shadowCaster.text =  $"【ShadowCaster】\n" +
+                    $"\t{((int)shadowCastersCountRecorder.LastValue).ToString("0").PadLeft(2)} 個";
+
+        callsText.text = $"【通常の描画回数】\n" +
+                    $"\tSetpassCalls{((int)setPassCallsRecorder.LastValue).ToString("0").PadLeft(4)} 回\n" +
+                    $"\tDrawCalls{((int)drawCallsRecorder.LastValue).ToString("0").PadLeft(7)} 回\n" +
+                    $"\tBatch数{((int)totalBatchCountRecorder.LastValue).ToString("0").PadLeft(9)} 回\n" +
+                    $"\tポリゴン数{((int)trianglesRecorder.LastValue/1000).ToString("0").PadLeft(7)} KTris";
+
+
+        callsGpuText.text = $"【GPUインスタンス描画回数】\n" +
+                    $"\tDrawCalls{((int)instanceBatchDrawCallRecorder.LastValue).ToString("0").PadLeft(5)} 回\n" +
+                    $"\tBatch数{((int)instanceBatchCountRecorder.LastValue).ToString("0").PadLeft(7)} 回\n" +
+                    $"\tポリゴン数{((int)instanceBatchTrianglesRecorder.LastValue/1000).ToString("0").PadLeft(5)} KTris";
+
+        float totalTime = (cpuTotalTimeRecorder.LastValue + gpuTimeRecorder.LastValue)/ 1_000_000f;
+        float calcFps = 1000 / totalTime;
+        string bottleNeck;
+        float diff = 0;
+        if(cpuTotalTimeRecorder.LastValue > gpuTimeRecorder.LastValue){
+            bottleNeck = "CPUボトルネック状態";
+            diff = (cpuTotalTimeRecorder.LastValue - gpuTimeRecorder.LastValue)/ 1_000_000f;;
+        }else{
+            bottleNeck = "GPUボトルネック状態";
+            diff = (gpuTimeRecorder.LastValue - cpuTotalTimeRecorder.LastValue)/ 1_000_000f;;
+        }
+        processorText.text = $"【処理時間】\n" +
+                    $"\tCPU処理時間{cpuTotalTimeRecorder.LastValue/1_000_000f, 7:F2} m秒/f\n" +
+                    $"\t  ・MainThread{cpuMainThreadTimeRecorder.LastValue/ 1_000_000f, 9:F2} m秒/f\n" +
+                    $"\t  ・RenderThread{cpuRenderThreadTimeRecorder.LastValue/ 1_000_000f, 7:F2} m秒/f\n" +
+                    $"\tGPU処理時間{gpuTimeRecorder.LastValue/ 1_000_000f, 7:F2} m秒/f\n\n" +
+                    $"\tCPU+GPU処理時間{totalTime, 7:F2} m秒/f\n" + 
+                    $"\t理論FPS{calcFps, 15:F0} FPS\n" + 
+                    $"\t評価：{bottleNeck} {diff, 2:F2}m秒/f";
+                    
+        cpuMemoryText.text =  $"【CPU Memory消費】\n" +        
+                    $"\t総消費{totalMemoryRecorder.LastValue/1024/1024, 9:F1} MB\n" +
+                    $"\t  ・Script消費{systemMemoryRecorder.LastValue/1024/1024, 8:F1} MB\n" +
+                    $"\t  ・Profiler消費{profilerMemoryRecorder.LastValue/1024/1024, 8:F1} MB\n" +
+                    $"\t  ・GC消費{gcMemoryRecorder.LastValue/1024/1024, 6:F0} MB";
+
+        gpuMemoryText.text =  $"【GPU Memory消費】\n" +        
+                    $"\t総消費{gpuUsedMemoryRecorder.LastValue/1024/1024, 9:F1} MB\n" +
+                    $"\t  ・Texture消費{loadedTextureMemoryRecorder.LastValue/1024/1024, 8:F1} MB/{((int)loadedTextureCountRecorder.LastValue).ToString("N0").PadLeft(6)} 個\n" +
+                    $"\t  ・Mesh消費{loadedMeshMemoryRecorder.LastValue/1024/1024, 11:F1} MB/{((int)loadedMeshCountRecorder.LastValue).ToString("N0").PadLeft(6)} 個\n" +
+                    $"\t  ・Material消費{loadedMaterialMemoryRecorder.LastValue/1024/1024, 7:F1} MB/{((int)loadedMaterialCountRecorder.LastValue).ToString("N0").PadLeft(6)} 個";
+
+        gcText.text =  $"【Gabage Collection】\n" +       
+                    $"\t発生頻度{((int)gcAlocCountRecorder.LastValue).ToString("N0").PadLeft(5)} 回/f";
     }
+
+
 
 }
