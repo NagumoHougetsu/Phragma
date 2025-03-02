@@ -11,5 +11,13 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/PerformanceCheck.unity
     guid: 4e2cc9f60265a404b819fb69f27801ef
-  m_configObjects: {}
+  m_configObjects:
+    com.unity.adaptiveperformance.google.android.provider_settings: {fileID: 11400000,
+      guid: 8db7ccd8b7e2ee740a2f0acf22c40abb, type: 2}
+    com.unity.adaptiveperformance.loader_settings: {fileID: 11400000, guid: 1237594c791a52a40886ef840df9ba70,
+      type: 2}
+    com.unity.adaptiveperformance.samsung.android.provider_settings: {fileID: 11400000,
+      guid: 09d6bb73a973a6c48adb4ab79c3a7cee, type: 2}
+    com.unity.adaptiveperformance.simulator.provider_settings: {fileID: 11400000,
+      guid: cc56f08af0569c144ba0cbb840621b85, type: 2}
   m_UseUCBPForAssetBundles: 0

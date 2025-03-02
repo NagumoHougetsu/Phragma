@@ -92,12 +92,15 @@ public class PerformanceMonitor : MonoBehaviour{
     private float lastUpdateTime = 0f;
     void Awake()
     {
+        QualitySettings.vSyncCount = 0;    
+        Application.targetFrameRate = 240; // OSやVSyncに依存
     #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Profiler.enabled = true;
     #endif
     }
 
     void Start(){
+        
         // FlopsManagerを取得
         flopsManager = FindObjectOfType<FlopsManager>();
         // 各ボタンに対するリスナーの設定
@@ -114,8 +117,8 @@ public class PerformanceMonitor : MonoBehaviour{
         }
 
         envManager = FindObjectOfType<EnvironmentManager>();
-        if (envManager != null && envManager.currentActivePrefab != null) {
-            string prefabName = envManager.currentActivePrefab.name;
+        if (envManager != null && envManager.CurrentActivePrefab != null) {
+            string prefabName = envManager.CurrentActivePrefab.name;
             Debug.Log("現在のアクティブなPrefab名: " + prefabName);
         } else {
             Debug.LogWarning("EnvironmentManager または currentActivePrefab が見つかりません！");
@@ -307,8 +310,8 @@ public class PerformanceMonitor : MonoBehaviour{
                                     long gcAlocCount, long gcAlocMemory, long gcMemory, long gcReservedMemory,
                                     long cumulativeBatchCount, long cumulativeVertexCount, long gameObjectCount
                                     ){
-        string prefabName = (envManager != null && envManager.currentActivePrefab != null) 
-            ? envManager.currentActivePrefab.name 
+        string prefabName = (envManager != null && envManager.CurrentActivePrefab != null) 
+            ? envManager.CurrentActivePrefab.name 
             : "None";  // Prefabがない場合は "None" を表示
 
         string text = $"【現在のPrefab】 {prefabName}\n" +
