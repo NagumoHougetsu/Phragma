@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI; // ← Button判定用
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour {
     public float moveSpeed = 5f;
@@ -15,7 +15,7 @@ public class PlayerController : MonoBehaviour {
     private float rotationSpeed = 100f;
     private bool wasRunning = false;
 
-    private Vector2 lastTwoFingerPos; // 二本指スワイプの前回位置
+    private Vector2 lastTwoFingerPos;
 
     void Start() {
         transform.position = initialCharacterPosition;
@@ -34,64 +34,58 @@ public class PlayerController : MonoBehaviour {
         if (animator == null) Debug.LogWarning("Animator が見つかりませんでした！");
     }
 
-    void FixedUpdate() {
+    void Update() {
         if (characterController == null) return;
 
-        // 🎮 PC用移動
-        float moveX = Input.GetAxisRaw("Horizontal"); 
+        float moveX = Input.GetAxisRaw("Horizontal");
         float moveZ = Input.GetAxisRaw("Vertical");
         float rot = 0;
 
         if (Input.GetKey(KeyCode.Q)) rot = -1;
         if (Input.GetKey(KeyCode.E)) rot = 1;
 
-        // 📱 スマホ用スワイプ（ボタンを触っている間は無効）
         if (Input.touchCount > 0) {
             Touch touch = Input.GetTouch(0);
-
-            // 🔹 UIのボタンやスライダーを触っているときはスワイプ無効
             if (IsTouchOverUI(touch)) return;
 
-            // 🔄 画面スワイプで移動
             if (touch.phase == TouchPhase.Moved) {
                 moveX = touch.deltaPosition.x * 0.01f;
                 moveZ = touch.deltaPosition.y * 0.01f;
             }
         }
 
-        // 📱 スマホ用回転（二本指スワイプ）
+        // 🔥 2本指スワイプでの回転判定を緩和
         if (Input.touchCount == 2) {
             Touch touch0 = Input.GetTouch(0);
             Touch touch1 = Input.GetTouch(1);
-
             Vector2 currentTwoFingerPos = (touch0.position + touch1.position) / 2;
 
-            // 🔹 初回タッチ位置を記録
             if (touch0.phase == TouchPhase.Began || touch1.phase == TouchPhase.Began) {
                 lastTwoFingerPos = currentTwoFingerPos;
-            }
-            else if (touch0.phase == TouchPhase.Moved || touch1.phase == TouchPhase.Moved) {
+            } else if (touch0.phase == TouchPhase.Moved || touch1.phase == TouchPhase.Moved) {
                 float deltaX = currentTwoFingerPos.x - lastTwoFingerPos.x;
 
-                if (Mathf.Abs(deltaX) > 20f) { // 一定距離スワイプしたら
-                    rot = (deltaX > 0) ? 1 : -1; // 右スワイプ → 時計回り、左スワイプ → 反時計回り
+                if (Mathf.Abs(deltaX) > 5f) { // ← 🔥 閾値を20px → 5pxに変更して判定を緩和
+                    rot = deltaX * 0.05f;  // ← 🔥 回転速度をなめらかに調整
                 }
 
-                lastTwoFingerPos = currentTwoFingerPos; // 位置を更新
+                lastTwoFingerPos = currentTwoFingerPos;
             }
         }
 
-        // 🔄 スムーズな回転処理
+        // 🔥 よりスムーズな回転処理
         if (rot != 0) {
-            Quaternion newRotation = Quaternion.Euler(0, rot * rotationSpeed * Time.fixedDeltaTime, 0);
-            characterController.transform.rotation *= newRotation;
+            Debug.Log($"Rotation Input: {rot * rotationSpeed * Time.deltaTime}");
+            characterPrefab.transform.Rotate(Vector3.up * rot * rotationSpeed * Time.deltaTime);
         }
 
-        // 🎮 移動処理（PC & スマホ共通）
-        Vector3 moveDirection = (characterController.transform.forward * moveZ + characterController.transform.right * moveX).normalized;
+        // 🔥 移動方向を characterPrefab の向きに合わせる
+        Vector3 moveDirection = (characterPrefab.transform.forward * moveZ + characterPrefab.transform.right * moveX).normalized;
+        
         if (moveDirection.magnitude < 0.1f) moveDirection = Vector3.zero;
-        characterController.Move(moveDirection * moveSpeed * Time.fixedDeltaTime);
+        characterController.Move(moveDirection * moveSpeed * Time.deltaTime);
 
+        // 🔥 アニメーション処理
         bool isMoving = moveDirection.magnitude > 0.1f;
         if (isMoving != wasRunning) {
             if (animator != null) {
@@ -101,18 +95,24 @@ public class PlayerController : MonoBehaviour {
         }
     }
 
-    // ✅ ボタンやスライダーがあるUIをタップしているかチェック
+    // ✅ UIをタップしているかを判定
     private bool IsTouchOverUI(Touch touch) {
-        PointerEventData eventData = new PointerEventData(EventSystem.current);
-        eventData.position = touch.position;
+        if (EventSystem.current == null) return false;
+
+        PointerEventData eventData = new PointerEventData(EventSystem.current) {
+            position = touch.position
+        };
 
         var results = new System.Collections.Generic.List<RaycastResult>();
         EventSystem.current.RaycastAll(eventData, results);
 
         foreach (var result in results) {
-            if (result.gameObject.GetComponent<Button>() != null || 
-                result.gameObject.GetComponent<Slider>() != null) {
-                return true;  // ボタン or スライダーを触っていたら無効
+            if (result.gameObject.GetComponent<Button>() != null ||
+                result.gameObject.GetComponent<Slider>() != null ||
+                result.gameObject.GetComponent<Scrollbar>() != null ||
+                result.gameObject.GetComponent<Dropdown>() != null ||
+                result.gameObject.GetComponent<Toggle>() != null) {
+                return true;
             }
         }
         return false;

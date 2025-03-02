@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: bf2edee5c58d82540a51f03df9d42094, type: 3}
-  m_Name: UTS2URPPipelineAsset
+  m_Name: URP_Phragma_00_Low
   m_EditorClassIdentifier: 
   k_AssetVersion: 12
   k_AssetPreviousVersion: 12
@@ -25,8 +25,8 @@ MonoBehaviour:
   m_SupportsTerrainHoles: 1
   m_SupportsHDR: 0
   m_HDRColorBufferPrecision: 0
-  m_MSAA: 2
-  m_RenderScale: 0.8
+  m_MSAA: 1
+  m_RenderScale: 0.6
   m_UpscalingFilter: 3
   m_FsrOverrideSharpness: 0
   m_FsrSharpness: 0.92
@@ -38,7 +38,7 @@ MonoBehaviour:
   m_SupportProbeVolumeStreaming: 0
   m_ProbeVolumeSHBands: 1
   m_MainLightRenderingMode: 1
-  m_MainLightShadowsSupported: 1
+  m_MainLightShadowsSupported: 0
   m_MainLightShadowmapResolution: 1024
   m_AdditionalLightsRenderingMode: 1
   m_AdditionalLightsPerObjectLimit: 4
@@ -49,16 +49,16 @@ MonoBehaviour:
   m_AdditionalLightsShadowResolutionTierHigh: 4096
   m_ReflectionProbeBlending: 0
   m_ReflectionProbeBoxProjection: 0
-  m_ShadowDistance: 329.57367
-  m_ShadowCascadeCount: 2
+  m_ShadowDistance: 0
+  m_ShadowCascadeCount: 1
   m_Cascade2Split: 0.25
   m_Cascade3Split: {x: 0.1, y: 0.3}
   m_Cascade4Split: {x: 0.067, y: 0.2, z: 0.467}
   m_CascadeBorder: 0.1
-  m_ShadowDepthBias: 5
+  m_ShadowDepthBias: 0
   m_ShadowNormalBias: 0.1
   m_AnyShadowsSupported: 1
-  m_SoftShadowsSupported: 1
+  m_SoftShadowsSupported: 0
   m_ConservativeEnclosingSphere: 0
   m_NumIterationsEnclosingSphere: 64
   m_SoftShadowQuality: 2
@@ -100,7 +100,7 @@ MonoBehaviour:
     hasProbeVolumes:
       m_Keys: []
       m_Values: 
-  m_PrefilteringModeMainLightShadows: 3
+  m_PrefilteringModeMainLightShadows: 0
   m_PrefilteringModeAdditionalLight: 3
   m_PrefilteringModeAdditionalLightShadows: 0
   m_PrefilterXRKeywords: 1
