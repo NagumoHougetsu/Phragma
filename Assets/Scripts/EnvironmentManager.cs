@@ -1,6 +1,12 @@
+// Extended EnvironmentManager for Static Batching Compatibility
+
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class EnvironmentManager : MonoBehaviour {
     [Header("Environment Prefabs")]
@@ -14,6 +20,7 @@ public class EnvironmentManager : MonoBehaviour {
     public Button toggleDownButton;
 
     public GameObject CurrentActivePrefab => currentActivePrefab;
+    private List<GameObject> preloadedPrefabs = new List<GameObject>(); // ←クラスメンバにする！
 
     void Awake() {
         // **シーン内の環境オブジェクトを削除**
@@ -24,61 +31,84 @@ public class EnvironmentManager : MonoBehaviour {
             }
         }
 
-        // **最初の環境をロード**
-        if (environmentPrefabs.Length > 0) {
-            currentIndex = 0;
-            LoadPrefab(currentIndex);
-        }
+        // Static計測したいときは、外部からInitStaticBatching呼ぶ
 
         toggleUpButton.onClick.RemoveAllListeners();
         toggleDownButton.onClick.RemoveAllListeners();
         toggleUpButton.onClick.AddListener(ToggleUp);
         toggleDownButton.onClick.AddListener(ToggleDown);
+        if (environmentPrefabs.Length > 0)
+        {
+            InitStaticBatching();
+        }
+    }
+    
+
+    public void InitStaticBatching() {
+        StartCoroutine(SetupStaticBatching());
     }
 
-    void LoadPrefab(int index) {
-        if (environmentPrefabs.Length == 0) return;
-        if (environmentPrefabs[index] == null) {
-            Debug.LogError($"Prefab at index {index} is NULL!");
-            return;
+    private IEnumerator SetupStaticBatching() {
+        preloadedPrefabs.Clear(); // ←追加
+        foreach (var prefab in environmentPrefabs) {
+            if (prefab == null) continue;
+            GameObject instance = Instantiate(prefab, transform);
+            instance.SetActive(false);
+            instance.tag = "Environment";
+            instance.isStatic = true;
+            preloadedPrefabs.Add(instance);
         }
 
-        StartCoroutine(SwitchPrefab(index));
-    }
+        yield return new WaitForEndOfFrame();
 
-    IEnumerator SwitchPrefab(int index) {
-        isProcessing = true;
-
-        // **現在のPrefabを削除**
-        if (currentActivePrefab != null) {
-            GameObject oldPrefab = currentActivePrefab;
-            currentActivePrefab = null; // 参照を切る
-
-            Destroy(oldPrefab);
-            yield return new WaitForSeconds(0.1f); // ちょっと待つ（安全策）
-            Resources.UnloadUnusedAssets(); // メモリ解放
+        for (int i = 0; i < preloadedPrefabs.Count; i++) {
+            preloadedPrefabs[i].SetActive(i == currentIndex);
+            if (i == currentIndex)
+                currentActivePrefab = preloadedPrefabs[i];
         }
-
-        // **新しいプレハブを生成**
-        currentActivePrefab = Instantiate(environmentPrefabs[index], transform);
-        currentActivePrefab.SetActive(true);
-
-        yield return null; // 1フレーム待つ（明示的に確実な処理順にする）
-
-        isProcessing = false; // 最後に処理完了を明示
     }
 
+    void SetActivePrefab(int index) {
+        for (int i = 0; i < preloadedPrefabs.Count; i++) {
+            preloadedPrefabs[i].SetActive(i == index);
+            if (i == index) currentActivePrefab = preloadedPrefabs[i];
+        }
+    }
     public void ToggleUp() {
-        if (environmentPrefabs.Length == 0 || isProcessing) return;
-
-        currentIndex = (currentIndex - 1 + environmentPrefabs.Length) % environmentPrefabs.Length;
-        LoadPrefab(currentIndex);
+        Debug.Log($"[ToggleUp] preloaded count={preloadedPrefabs.Count}, index={currentIndex}");
+        if (preloadedPrefabs.Count == 0 || isProcessing) return;
+        StartCoroutine(SwitchEnvironment(-1));
     }
 
     public void ToggleDown() {
-        if (environmentPrefabs.Length == 0 || isProcessing) return;
+        Debug.Log($"[ToggleUp] preloaded count={preloadedPrefabs.Count}, index={currentIndex}");
+        if (preloadedPrefabs.Count == 0 || isProcessing) return;
+        StartCoroutine(SwitchEnvironment(+1));
 
-        currentIndex = (currentIndex + 1) % environmentPrefabs.Length;
-        LoadPrefab(currentIndex);
+    }
+    private IEnumerator SwitchEnvironment(int direction) {
+        isProcessing = true;
+
+        int newIndex = (currentIndex + direction + environmentPrefabs.Length) % environmentPrefabs.Length;
+
+        // ★ 未ロードならここで追加ロード
+        if (newIndex >= preloadedPrefabs.Count && newIndex < environmentPrefabs.Length) {
+            GameObject instance = Instantiate(environmentPrefabs[newIndex], transform);
+            instance.tag = "Environment";
+            instance.SetActive(false);
+            preloadedPrefabs.Add(instance);
+        }
+
+        // 非表示化
+        if (currentActivePrefab != null)
+            currentActivePrefab.SetActive(false);
+
+        // 表示切替
+        preloadedPrefabs[newIndex].SetActive(true);
+        currentActivePrefab = preloadedPrefabs[newIndex];
+        currentIndex = newIndex;
+
+        yield return new WaitForSeconds(0.2f);
+        isProcessing = false;
     }
 }
