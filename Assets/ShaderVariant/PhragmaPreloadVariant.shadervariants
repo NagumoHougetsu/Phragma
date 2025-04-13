@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!200 &20000000
+ShaderVariantCollection:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: PhragmaPreloadVariant
+  m_Shaders:
+  - first: {fileID: 4800000, guid: 32f9860a5e2de1247b8e9a6213f636e4, type: 3}
+    second:
+      variants:
+      - keywords: INSTANCING_ON _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 8
+      - keywords: FOG_EXP2 INSTANCING_ON _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 13
+  - first: {fileID: 4800000, guid: c3e32aacfb11b2d469cefba940b85e5e, type: 3}
+    second:
+      variants:
+      - keywords: _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 8
+      - keywords: FOG_EXP2 _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 13
+  - first: {fileID: 4800000, guid: a217a09393449fa469db561c5c138954, type: 3}
+    second:
+      variants:
+      - keywords: _ALPHATEST_ON _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 8
+      - keywords: FOG_EXP2 _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 13
+  - first: {fileID: 4800000, guid: ebdeccc684f57614aac1f75c209d86f9, type: 3}
+    second:
+      variants:
+      - keywords: INSTANCING_ON _ALPHATEST_ON _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 8
+      - keywords: FOG_EXP2 INSTANCING_ON _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
+        passType: 13

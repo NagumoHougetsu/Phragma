@@ -48,20 +48,30 @@ public class EnvironmentManager : MonoBehaviour {
         StartCoroutine(SetupStaticBatching());
     }
 
-    private IEnumerator SetupStaticBatching() {
-        preloadedPrefabs.Clear(); // ←追加
-        foreach (var prefab in environmentPrefabs) {
+    IEnumerator SetupStaticBatching()
+    {
+        preloadedPrefabs.Clear();
+
+        foreach (var prefab in environmentPrefabs)
+        {
             if (prefab == null) continue;
+
             GameObject instance = Instantiate(prefab, transform);
-            instance.SetActive(false);
+            instance.SetActive(true); // ← Awake時に表示状態にしておくのが超重要！
             instance.tag = "Environment";
             instance.isStatic = true;
+
             preloadedPrefabs.Add(instance);
         }
 
-        yield return new WaitForEndOfFrame();
+        yield return new WaitForEndOfFrame(); // Batchingがここで確定
 
-        for (int i = 0; i < preloadedPrefabs.Count; i++) {
+        // 👇ここで一括StaticBatchを明示的に行う（UnityEditor外でも効く）
+        StaticBatchingUtility.Combine(gameObject);
+
+        // ここで非表示にしてもOK（バッチ済み）
+        for (int i = 0; i < preloadedPrefabs.Count; i++)
+        {
             preloadedPrefabs[i].SetActive(i == currentIndex);
             if (i == currentIndex)
                 currentActivePrefab = preloadedPrefabs[i];

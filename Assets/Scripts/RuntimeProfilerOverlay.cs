@@ -63,7 +63,7 @@ public class RuntimeProfilerOverlay : MonoBehaviour
     };
     void Awake()
     {
-        Application.targetFrameRate = 300;
+        Application.targetFrameRate = 200;
         QualitySettings.vSyncCount = 0;
     }
     void OnEnable()

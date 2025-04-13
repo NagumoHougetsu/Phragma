@@ -23,13 +23,15 @@ Shader "Custom/CustomStandard_StaticBatching_Transparent"
             Blend SrcAlpha OneMinusSrcAlpha
             ZWrite Off
             Cull Back
+            
 
             HLSLPROGRAM
             #pragma target 2.0
             #pragma vertex vert
             #pragma fragment frag
+
             #pragma multi_compile_fog
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma shader_feature _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
@@ -109,12 +111,25 @@ Shader "Custom/CustomStandard_StaticBatching_Transparent"
             Tags { "LightMode"="ShadowCaster" }
             ZWrite On
             ZTest LEqual
+            ColorMask 0
 
             HLSLPROGRAM
             #pragma vertex ShadowPassVertex
             #pragma fragment ShadowPassFragment
+
+            #pragma shader_feature _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
             #pragma shader_feature _ALPHATEST_ON
-            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
+
+            float4 _BaseMap_ST;
+            float4 _BaseColor;
+            float _Cutoff; // ← 追加！
+
+            inline float Alpha(float alpha, float cutoff, float2 uv) // ← 追加！
+            {
+                clip(alpha - cutoff);
+                return alpha;
+            }
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/ShadowCasterPass.hlsl"
             ENDHLSL

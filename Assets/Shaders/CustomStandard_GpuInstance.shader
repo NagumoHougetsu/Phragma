@@ -29,18 +29,16 @@ Shader "Custom/CustomStandard_GpuInstance"
             Blend One Zero
             ZWrite On
             Cull Back
-
+            
             HLSLPROGRAM
             #pragma target 2.0
             #pragma vertex vert
             #pragma fragment frag
+
             #pragma multi_compile_instancing
-            #pragma multi_compile
-            #pragma multi_compile_fog
-            // Universal Pipeline shadow keywords
-            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma shader_feature _ _MAIN_LIGHT_SHADOWS
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
-            
+            #pragma multi_compile_fog
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
@@ -117,6 +115,7 @@ Shader "Custom/CustomStandard_GpuInstance"
                 float3 finalColor = diffuse + specular + gi * baseColor.rgb;
                 finalColor.rgb = MixFog(finalColor.rgb, IN.fogFactor);
                 return float4(finalColor, baseColor.a);
+                //return float4(shadowAtten.xxx, 1.0); // 白なら落ちてない、グレー〜黒なら落ちてる
             }
             ENDHLSL
         }
@@ -127,15 +126,16 @@ Shader "Custom/CustomStandard_GpuInstance"
         
             ZWrite On
             ZTest LEqual
+            ColorMask 0
+
         
             HLSLPROGRAM
             #pragma vertex ShadowPassVertex
             #pragma fragment ShadowPassFragment
-        
-            #pragma shader_feature _ALPHATEST_ON
-            #pragma shader_feature _SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A
-        
+            
             #pragma multi_compile_instancing
+            #pragma shader_feature _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE   
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/SurfaceInput.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/Shaders/ShadowCasterPass.hlsl"
